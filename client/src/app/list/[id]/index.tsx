@@ -2,7 +2,6 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   Alert,
-  FlatList,
   Platform,
   Pressable,
   StyleSheet,
@@ -12,19 +11,16 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-import { PhraseCardView } from "@/components/phrase-card-view";
-import { PhraseCardEdit } from "@/components/phrase-card-edit";
 import { Spacing } from "@/constants/theme";
 import { usePhraseLists } from "@/hooks/use-phrase-lists";
-import type { Phrase, PhraseList } from "@/types";
+import type { PhraseList } from "@/types";
 import { confirm } from "@/utils";
 
 export default function ListDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { lists, deletePhrase, deleteList, updatePhrase } = usePhraseLists();
+  const { lists, deleteList } = usePhraseLists();
   const router = useRouter();
   const [list, setList] = useState<PhraseList | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
 
   useEffect(() => {
     const found = lists.find((l) => l.id === id) ?? null;
@@ -41,23 +37,6 @@ export default function ListDetailScreen() {
         router.replace("/");
       }
     );
-  }
-
-  function handleDeletePhrase(phrase: Phrase) {
-    confirm(
-      "Eliminar frase",
-      `¿Eliminar "${phrase.nativeSentence}"?`,
-      () => deletePhrase(id!, phrase.id)
-    );
-  }
-
-  async function handleSaveEdit(
-    phraseId: string,
-    nativeSentence: string,
-    acceptedTranslations: string[]
-  ) {
-    await updatePhrase(id!, phraseId, { nativeSentence, acceptedTranslations });
-    setEditingId(null);
   }
 
   function handlePractice() {
@@ -80,88 +59,93 @@ export default function ListDetailScreen() {
     );
   }
 
-  function renderPhrase({ item }: { item: Phrase }) {
-    if (editingId === item.id) {
-      return (
-        <PhraseCardEdit
-          phrase={item}
-          onSave={(native, translations) =>
-            handleSaveEdit(item.id, native, translations)
-          }
-          onCancel={() => setEditingId(null)}
-        />
-      );
-    }
-
-    return (
-      <PhraseCardView
-        phrase={item}
-        onPress={() => setEditingId(item.id)}
-        onLongPress={() => handleDeletePhrase(item)}
-      />
-    );
-  }
+  const totalCorrect = list.phrases.reduce(
+    (sum, p) => sum + (p.stats?.correctCount ?? 0),
+    0
+  );
+  const totalIncorrect = list.phrases.reduce(
+    (sum, p) => sum + (p.stats?.incorrectCount ?? 0),
+    0
+  );
+  const totalAttempts = totalCorrect + totalIncorrect;
+  const accuracy =
+    totalAttempts > 0 ? Math.round((totalCorrect / totalAttempts) * 100) : null;
 
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safe} edges={["bottom"]}>
-        <View style={styles.header}>
-          <ThemedText type="subtitle">{list.name}</ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
-            {list.nativeLanguage.toUpperCase()} → {list.targetLanguage.toUpperCase()} ·{" "}
-            {list.phrases.length} frase{list.phrases.length !== 1 ? "s" : ""}
-          </ThemedText>
-        </View>
-
-        {list.phrases.length === 0 ? (
-          <View style={styles.empty}>
-            <ThemedText themeColor="textSecondary" style={styles.center}>
-              Sin frases. Agrega la primera.
+        <View style={styles.content}>
+          {/* Summary */}
+          <View style={styles.summary}>
+            <ThemedText type="title">{list.name}</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              {list.nativeLanguage.toUpperCase()} → {list.targetLanguage.toUpperCase()}
             </ThemedText>
+            <ThemedText type="subtitle">
+              {list.phrases.length} frase{list.phrases.length !== 1 ? "s" : ""}
+            </ThemedText>
+
+            {accuracy !== null && (
+              <View style={styles.statsBlock}>
+                <ThemedText type="small" themeColor="textSecondary">
+                  Precisión general
+                </ThemedText>
+                <ThemedText type="title" style={styles.accuracyText}>
+                  {accuracy}%
+                </ThemedText>
+                <View style={styles.statsRow}>
+                  <ThemedText type="small" style={styles.statCorrect}>
+                    ✓ {totalCorrect}
+                  </ThemedText>
+                  <ThemedText type="small" style={styles.statIncorrect}>
+                    ✗ {totalIncorrect}
+                  </ThemedText>
+                </View>
+              </View>
+            )}
           </View>
-        ) : (
-          <FlatList
-            data={list.phrases}
-            keyExtractor={(item) => item.id}
-            renderItem={renderPhrase}
-            extraData={editingId}
-            contentContainerStyle={styles.listContent}
-          />
-        )}
 
-        <View style={styles.actions}>
-          <Pressable
-            onPress={() => router.push(`/list/${id}/add-phrase`)}
-            style={({ pressed }) => [
-              styles.button,
-              styles.secondaryButton,
-              pressed && styles.pressed,
-            ]}
-          >
-            <ThemedText style={styles.secondaryButtonText}>+ Frase</ThemedText>
-          </Pressable>
+          {/* Actions */}
+          <View style={styles.actions}>
+            <Pressable
+              onPress={handlePractice}
+              style={({ pressed }) => [
+                styles.actionButton,
+                styles.primaryButton,
+                pressed && styles.pressed,
+              ]}
+            >
+              <ThemedText style={styles.primaryButtonText}>
+                Practicar
+              </ThemedText>
+            </Pressable>
 
-          <Pressable
-            onPress={handlePractice}
-            style={({ pressed }) => [
-              styles.button,
-              styles.primaryButton,
-              pressed && styles.pressed,
-            ]}
-          >
-            <ThemedText style={styles.primaryButtonText}>Practicar</ThemedText>
-          </Pressable>
+            <Pressable
+              onPress={() => router.push(`/list/${id}/edit`)}
+              style={({ pressed }) => [
+                styles.actionButton,
+                styles.secondaryButton,
+                pressed && styles.pressed,
+              ]}
+            >
+              <ThemedText style={styles.secondaryButtonText}>
+                Editar frases
+              </ThemedText>
+            </Pressable>
+
+            <Pressable
+              onPress={handleDeleteList}
+              style={({ pressed }) => [
+                styles.deleteButton,
+                pressed && styles.pressed,
+              ]}
+            >
+              <ThemedText style={styles.deleteButtonText}>
+                Eliminar lista
+              </ThemedText>
+            </Pressable>
+          </View>
         </View>
-
-        <Pressable
-          onPress={handleDeleteList}
-          style={({ pressed }) => [
-            styles.deleteButton,
-            pressed && styles.pressed,
-          ]}
-        >
-          <ThemedText style={styles.deleteButtonText}>Eliminar lista</ThemedText>
-        </Pressable>
       </SafeAreaView>
     </ThemedView>
   );
@@ -174,30 +158,41 @@ const styles = StyleSheet.create({
   safe: {
     flex: 1,
   },
-  header: {
-    padding: Spacing.three,
-    gap: Spacing.one,
+  content: {
+    flex: 1,
+    padding: Spacing.four,
+    justifyContent: "space-between",
   },
-  listContent: {
-    padding: Spacing.three,
-    gap: Spacing.two,
-  },
-  empty: {
+  summary: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: Spacing.four,
-  },
-  center: {
-    textAlign: "center",
-  },
-  actions: {
-    flexDirection: "row",
-    padding: Spacing.three,
     gap: Spacing.two,
   },
-  button: {
-    flex: 1,
+  statsBlock: {
+    marginTop: Spacing.four,
+    alignItems: "center",
+    gap: Spacing.one,
+  },
+  accuracyText: {
+    color: "#4A90D9",
+  },
+  statsRow: {
+    flexDirection: "row",
+    gap: Spacing.four,
+  },
+  statCorrect: {
+    color: "#28A745",
+    fontWeight: "600",
+  },
+  statIncorrect: {
+    color: "#DC3545",
+    fontWeight: "600",
+  },
+  actions: {
+    gap: Spacing.two,
+  },
+  actionButton: {
     padding: Spacing.three,
     borderRadius: Spacing.two,
     alignItems: "center",
@@ -207,6 +202,7 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     color: "#fff",
+    fontSize: 16,
     fontWeight: "600",
   },
   secondaryButton: {
@@ -215,20 +211,22 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     color: "#4A90D9",
+    fontSize: 16,
     fontWeight: "600",
-  },
-  pressed: {
-    opacity: 0.7,
   },
   deleteButton: {
     padding: Spacing.two,
     alignItems: "center",
-    marginHorizontal: Spacing.three,
-    marginBottom: Spacing.two,
   },
   deleteButtonText: {
     color: "#DC3545",
     fontSize: 14,
     fontWeight: "600",
+  },
+  pressed: {
+    opacity: 0.7,
+  },
+  center: {
+    textAlign: "center",
   },
 });

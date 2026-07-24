@@ -36,6 +36,10 @@ export default function RootLayout() {
             />
             <Stack.Screen name="list/[id]/index" options={{ title: "Lista" }} />
             <Stack.Screen
+              name="list/[id]/edit"
+              options={{ title: "Editar Frases" }}
+            />
+            <Stack.Screen
               name="list/[id]/add-phrase"
               options={{ title: "Agregar Frase" }}
             />
