@@ -6,6 +6,7 @@ import {
   Platform,
   Pressable,
   StyleSheet,
+  TextInput,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -19,9 +20,12 @@ import { confirm } from "@/utils";
 
 export default function ListDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { lists, deletePhrase, deleteList } = usePhraseLists();
+  const { lists, deletePhrase, deleteList, updatePhrase } = usePhraseLists();
   const router = useRouter();
   const [list, setList] = useState<PhraseList | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editNative, setEditNative] = useState("");
+  const [editTranslations, setEditTranslations] = useState("");
 
   useEffect(() => {
     const found = lists.find((l) => l.id === id) ?? null;
@@ -48,6 +52,36 @@ export default function ListDetailScreen() {
     );
   }
 
+  function handleStartEdit(phrase: Phrase) {
+    setEditingId(phrase.id);
+    setEditNative(phrase.nativeSentence);
+    setEditTranslations(phrase.acceptedTranslations.join(", "));
+  }
+
+  function handleCancelEdit() {
+    setEditingId(null);
+    setEditNative("");
+    setEditTranslations("");
+  }
+
+  async function handleSaveEdit() {
+    if (!editingId || !editNative.trim() || !editTranslations.trim()) return;
+
+    const acceptedTranslations = editTranslations
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
+
+    if (acceptedTranslations.length === 0) return;
+
+    await updatePhrase(id!, editingId, {
+      nativeSentence: editNative.trim(),
+      acceptedTranslations,
+    });
+
+    handleCancelEdit();
+  }
+
   function handlePractice() {
     if (!list || list.phrases.length === 0) {
       if (Platform.OS === "web") {
@@ -69,8 +103,63 @@ export default function ListDetailScreen() {
   }
 
   function renderPhrase({ item }: { item: Phrase }) {
+    const isEditing = editingId === item.id;
+
+    if (isEditing) {
+      return (
+        <ThemedView type="backgroundElement" style={styles.editCard}>
+          <View style={styles.editField}>
+            <ThemedText type="small" themeColor="textSecondary">
+              Oración nativa
+            </ThemedText>
+            <TextInput
+              style={styles.editInput}
+              value={editNative}
+              onChangeText={setEditNative}
+              multiline
+              autoFocus
+            />
+          </View>
+          <View style={styles.editField}>
+            <ThemedText type="small" themeColor="textSecondary">
+              Traducciones (separadas por coma)
+            </ThemedText>
+            <TextInput
+              style={styles.editInput}
+              value={editTranslations}
+              onChangeText={setEditTranslations}
+              multiline
+            />
+          </View>
+          <View style={styles.editActions}>
+            <Pressable
+              onPress={handleCancelEdit}
+              style={({ pressed }) => [
+                styles.editButton,
+                styles.editCancelButton,
+                pressed && styles.pressed,
+              ]}
+            >
+              <ThemedText style={styles.editCancelText}>Cancelar</ThemedText>
+            </Pressable>
+            <Pressable
+              onPress={handleSaveEdit}
+              style={({ pressed }) => [
+                styles.editButton,
+                styles.editSaveButton,
+                pressed && styles.pressed,
+              ]}
+            >
+              <ThemedText style={styles.editSaveText}>Guardar</ThemedText>
+            </Pressable>
+          </View>
+        </ThemedView>
+      );
+    }
+
     return (
       <Pressable
+        onPress={() => handleStartEdit(item)}
         onLongPress={() => handleDeletePhrase(item)}
         style={({ pressed }) => pressed && styles.pressed}
       >
@@ -106,6 +195,7 @@ export default function ListDetailScreen() {
             data={list.phrases}
             keyExtractor={(item) => item.id}
             renderItem={renderPhrase}
+            extraData={editingId}
             contentContainerStyle={styles.listContent}
           />
         )}
@@ -167,6 +257,51 @@ const styles = StyleSheet.create({
     padding: Spacing.three,
     borderRadius: Spacing.two,
     gap: Spacing.one,
+  },
+  editCard: {
+    padding: Spacing.three,
+    borderRadius: Spacing.two,
+    gap: Spacing.two,
+    borderWidth: 1,
+    borderColor: "#4A90D9",
+  },
+  editField: {
+    gap: Spacing.one,
+  },
+  editInput: {
+    borderWidth: 1,
+    borderColor: "#555",
+    borderRadius: Spacing.one,
+    padding: Spacing.two,
+    fontSize: 14,
+    color: "#fff",
+    minHeight: 40,
+  },
+  editActions: {
+    flexDirection: "row",
+    gap: Spacing.two,
+    justifyContent: "flex-end",
+  },
+  editButton: {
+    paddingVertical: Spacing.one,
+    paddingHorizontal: Spacing.three,
+    borderRadius: Spacing.one,
+  },
+  editCancelButton: {
+    borderWidth: 1,
+    borderColor: "#888",
+  },
+  editCancelText: {
+    color: "#888",
+    fontSize: 14,
+  },
+  editSaveButton: {
+    backgroundColor: "#4A90D9",
+  },
+  editSaveText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
   },
   empty: {
     flex: 1,
