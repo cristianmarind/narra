@@ -23,8 +23,12 @@ export default function RootLayout() {
           <Stack screenOptions={{ headerShown: true }}>
             <Stack.Screen name="index" options={{ title: "Mis Listas" }} />
             <Stack.Screen
-              name="list/create"
+              name="list/new"
               options={{ title: "Nueva Lista" }}
+            />
+            <Stack.Screen
+              name="list/create"
+              options={{ title: "Crear Lista" }}
             />
             <Stack.Screen
               name="list/import"

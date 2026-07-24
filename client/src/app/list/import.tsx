@@ -165,13 +165,16 @@ export default function ImportListScreen() {
           <View style={styles.section}>
             <ThemedText type="subtitle">Importar lista desde JSON</ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
-              Selecciona un archivo .json con el siguiente formato:
+              Selecciona un archivo, pega el JSON directamente, o genera uno con IA.
             </ThemedText>
-            <ThemedView type="backgroundElement" style={styles.codeBlock}>
-              <ThemedText type="small" style={styles.codeText}>
-                {`{\n  "name": "Mi lista",\n  "nativeLanguage": "es",\n  "targetLanguage": "en",\n  "phrases": [\n    {\n      "nativeSentence": "Hola",\n      "acceptedTranslations": ["Hello", "Hi"]\n    }\n  ]\n}`}
+            <Pressable
+              onPress={() => router.push("/list/ai-helper")}
+              style={({ pressed }) => [styles.helperLink, pressed && styles.pressed]}
+            >
+              <ThemedText style={styles.helperLinkText}>
+                🤖 Generar JSON con IA (ver prompt)
               </ThemedText>
-            </ThemedView>
+            </Pressable>
           </View>
 
           {/* Pick file button */}
@@ -360,5 +363,18 @@ const styles = StyleSheet.create({
   },
   disabled: {
     opacity: 0.4,
+  },
+  helperLink: {
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    borderRadius: Spacing.two,
+    borderWidth: 1,
+    borderColor: "#666",
+    alignSelf: "flex-start",
+  },
+  helperLinkText: {
+    color: "#4A90D9",
+    fontSize: 14,
+    fontWeight: "600",
   },
 });

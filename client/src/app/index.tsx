@@ -1,11 +1,5 @@
 import { useRouter } from "expo-router";
-import {
-  Alert,
-  FlatList,
-  Pressable,
-  StyleSheet,
-  View,
-} from "react-native";
+import { FlatList, Pressable, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ThemedText } from "@/components/themed-text";
@@ -15,29 +9,13 @@ import { usePhraseLists } from "@/hooks/use-phrase-lists";
 import type { PhraseList } from "@/types";
 
 export default function HomeScreen() {
-  const { lists, loading, deleteList } = usePhraseLists();
+  const { lists, loading } = usePhraseLists();
   const router = useRouter();
-
-  function handleDelete(list: PhraseList) {
-    Alert.alert(
-      "Eliminar lista",
-      `¿Eliminar "${list.name}"?`,
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: "Eliminar",
-          style: "destructive",
-          onPress: () => deleteList(list.id),
-        },
-      ]
-    );
-  }
 
   function renderItem({ item }: { item: PhraseList }) {
     return (
       <Pressable
         onPress={() => router.push(`/list/${item.id}`)}
-        onLongPress={() => handleDelete(item)}
         style={({ pressed }) => [styles.card, pressed && styles.pressed]}
       >
         <ThemedView type="backgroundElement" style={styles.cardInner}>
@@ -76,30 +54,12 @@ export default function HomeScreen() {
           />
         )}
 
-        <View style={styles.actions}>
-          <Pressable
-            onPress={() => router.push("/list/ai-helper")}
-            style={({ pressed }) => [styles.actionButton, pressed && styles.pressed]}
-          >
-            <ThemedText style={styles.actionIcon}>🤖</ThemedText>
-            <ThemedText type="small" style={styles.actionLabel}>IA</ThemedText>
-          </Pressable>
-
-          <Pressable
-            onPress={() => router.push("/list/create")}
-            style={({ pressed }) => [styles.fab, pressed && styles.pressed]}
-          >
-            <ThemedText style={styles.fabText}>+</ThemedText>
-          </Pressable>
-
-          <Pressable
-            onPress={() => router.push("/list/import")}
-            style={({ pressed }) => [styles.actionButton, pressed && styles.pressed]}
-          >
-            <ThemedText style={styles.actionIcon}>📁</ThemedText>
-            <ThemedText type="small" style={styles.actionLabel}>JSON</ThemedText>
-          </Pressable>
-        </View>
+        <Pressable
+          onPress={() => router.push("/list/new")}
+          style={({ pressed }) => [styles.fab, pressed && styles.pressed]}
+        >
+          <ThemedText style={styles.fabText}>+</ThemedText>
+        </Pressable>
       </SafeAreaView>
     </ThemedView>
   );
@@ -139,6 +99,9 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   fab: {
+    position: "absolute",
+    bottom: Spacing.four,
+    right: Spacing.four,
     width: 56,
     height: 56,
     borderRadius: 28,
@@ -156,24 +119,5 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: "bold",
     marginTop: -2,
-  },
-  actions: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: Spacing.four,
-    paddingVertical: Spacing.three,
-    paddingHorizontal: Spacing.four,
-  },
-  actionButton: {
-    alignItems: "center",
-    gap: 2,
-  },
-  actionIcon: {
-    fontSize: 24,
-  },
-  actionLabel: {
-    color: "#4A90D9",
-    fontWeight: "600",
   },
 });
