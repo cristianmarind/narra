@@ -3,11 +3,19 @@ import type { SpeechService } from "@/types";
 
 /**
  * expo-speech based implementation of SpeechService.
+ * speak() returns a Promise that resolves only when the utterance finishes.
  */
 export function createExpoSpeechService(): SpeechService {
   return {
-    async speak(text: string, language: string) {
-      await ExpoSpeech.speak(text, { language });
+    speak(text: string, language: string): Promise<void> {
+      return new Promise<void>((resolve) => {
+        ExpoSpeech.speak(text, {
+          language,
+          onDone: () => resolve(),
+          onStopped: () => resolve(),
+          onError: () => resolve(),
+        });
+      });
     },
 
     stop() {

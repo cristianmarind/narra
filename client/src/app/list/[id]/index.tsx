@@ -21,6 +21,7 @@ export default function ListDetailScreen() {
   const { lists, deleteList } = usePhraseLists();
   const router = useRouter();
   const [list, setList] = useState<PhraseList | null>(null);
+  const [voiceMode, setVoiceMode] = useState(false);
 
   useEffect(() => {
     const found = lists.find((l) => l.id === id) ?? null;
@@ -48,7 +49,7 @@ export default function ListDetailScreen() {
       }
       return;
     }
-    router.push(`/list/${id}/practice`);
+    router.push(`/list/${id}/practice?voiceMode=${voiceMode ? "1" : "0"}`);
   }
 
   if (!list) {
@@ -107,6 +108,19 @@ export default function ListDetailScreen() {
 
           {/* Actions */}
           <View style={styles.actions}>
+            {/* Voice mode toggle */}
+            <Pressable
+              onPress={() => setVoiceMode(!voiceMode)}
+              style={({ pressed }) => [styles.voiceToggle, pressed && styles.pressed]}
+            >
+              <View style={[styles.checkbox, voiceMode && styles.checkboxActive]}>
+                {voiceMode && <ThemedText style={styles.checkmark}>✓</ThemedText>}
+              </View>
+              <ThemedText style={styles.voiceToggleText}>
+                Modo voz (manos libres)
+              </ThemedText>
+            </Pressable>
+
             <Pressable
               onPress={handlePractice}
               style={({ pressed }) => [
@@ -191,6 +205,35 @@ const styles = StyleSheet.create({
   },
   actions: {
     gap: Spacing.two,
+  },
+  voiceToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.two,
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    marginBottom: Spacing.two,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: "#4A90D9",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  checkboxActive: {
+    backgroundColor: "#4A90D9",
+  },
+  checkmark: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "bold",
+  },
+  voiceToggleText: {
+    fontSize: 15,
+    color: "#ccc",
   },
   actionButton: {
     padding: Spacing.three,

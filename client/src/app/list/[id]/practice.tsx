@@ -13,12 +13,32 @@ import { usePracticeSession } from "@/hooks/use-practice-session";
 import { useSpeech } from "@/hooks/use-speech";
 import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
 import type { PhraseList, PhraseResult } from "@/types";
+import { playBeep } from "@/utils";
 
 const TIMER_CORRECT_SECONDS = 3;
 const TIMER_INCORRECT_SECONDS = 15;
 
+/**
+ * Voice mode phases:
+ * - "answer": listening for the user's translation
+ * - "pre-command": listening for "verify" or "repeat"
+ *     verify → submit answer
+ *     repeat → clear answer, re-read native phrase, go back to "answer"
+ * - "post-command": listening for "next", "repeat", "stop"
+ *     next → advance
+ *     repeat → re-read correct answer in target language
+ *     stop → cancel timer
+ * - null: not in a voice phase
+ */
+type VoicePhase = "answer" | "pre-command" | "post-command" | null;
+
 export default function PracticeScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, voiceMode: voiceModeParam } = useLocalSearchParams<{
+    id: string;
+    voiceMode?: string;
+  }>();
+  const voiceMode = voiceModeParam === "1";
+
   const { lists, addUserTranslation, recordPhraseResult } = usePhraseLists();
   const router = useRouter();
   const { speak, speaking } = useSpeech();
@@ -50,6 +70,19 @@ export default function PracticeScreen() {
   const [countdown, setCountdown] = useState<number | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Voice mode state
+  const [voicePhase, setVoicePhase] = useState<VoicePhase>(null);
+  const voicePhaseRef = useRef<VoicePhase>(null);
+  const answerRef = useRef("");
+
+  // Keep refs in sync
+  useEffect(() => {
+    voicePhaseRef.current = voicePhase;
+  }, [voicePhase]);
+  useEffect(() => {
+    answerRef.current = answer;
+  }, [answer]);
+
   // Find the list and start session
   useEffect(() => {
     const found = lists.find((l) => l.id === id) ?? null;
@@ -60,19 +93,137 @@ export default function PracticeScreen() {
     }
   }, [lists, id, status, start, started]);
 
-  // Auto-speak the native sentence when phrase changes
+  // Auto-speak the native sentence when phrase changes, then activate voice mode
   useEffect(() => {
-    if (currentPhrase && list && status === "active") {
-      speak(currentPhrase.nativeSentence, list.nativeLanguage);
+    if (currentPhrase && list && status === "active" && !lastResult) {
+      // Stop listening before TTS speaks to avoid capturing the app's own voice
+      if (listening) {
+        stopListening();
+      }
+      setVoicePhase(null);
+      speak(currentPhrase.nativeSentence, list.nativeLanguage).then(() => {
+        if (voiceMode) {
+          startVoicePhase("answer");
+        }
+      });
     }
   }, [currentPhrase?.id, status]);
 
-  // Sync speech recognition transcript into the answer field
+  // Process transcript based on current voice phase
   useEffect(() => {
-    if (transcript) {
+    if (!transcript) return;
+
+    const phase = voicePhaseRef.current;
+    const normalized = transcript.toLowerCase().trim();
+
+    if (phase === "answer") {
+      // Just capture into the answer field
+      setAnswer(transcript);
+    } else if (phase === "pre-command") {
+      if (normalized.includes("verify") || normalized.includes("verificar")) {
+        clearTranscript();
+        setVoicePhase(null);
+        // Use ref for the latest answer value
+        if (answerRef.current.trim()) {
+          doSubmit(answerRef.current.trim());
+        }
+      } else if (normalized.includes("repeat") || normalized.includes("repetir")) {
+        clearTranscript();
+        setVoicePhase(null);
+        if (listening) stopListening();
+        // Clear answer, re-read phrase, go back to answer phase
+        setAnswer("");
+        if (currentPhrase && list) {
+          playBeep(600, 100);
+          speak(currentPhrase.nativeSentence, list.nativeLanguage).then(() => {
+            startVoicePhase("answer");
+          });
+        }
+      }
+    } else if (phase === "post-command") {
+      if (normalized.includes("next") || normalized.includes("siguiente")) {
+        clearTranscript();
+        setVoicePhase(null);
+        if (listening) stopListening();
+        handleNext();
+      } else if (normalized.includes("repeat") || normalized.includes("repetir")) {
+        clearTranscript();
+        setVoicePhase(null);
+        if (listening) stopListening();
+        if (currentPhrase && list) {
+          speak(currentPhrase.acceptedTranslations[0], list.targetLanguage).then(() => {
+            startVoicePhase("post-command");
+          });
+        }
+      } else if (normalized.includes("stop") || normalized.includes("parar")) {
+        clearTranscript();
+        setVoicePhase(null);
+        if (listening) stopListening();
+        handleCancelTimer();
+        setTimeout(() => startVoicePhase("post-command"), 300);
+      }
+    } else if (!phase && !voiceMode) {
+      // Manual mic usage (non-voice mode)
       setAnswer(transcript);
     }
   }, [transcript]);
+
+  // When listening stops in voice mode, handle re-activation based on phase
+  useEffect(() => {
+    if (!voiceMode || listening) return;
+
+    const phase = voicePhaseRef.current;
+    if (!phase) return;
+
+    if (phase === "answer") {
+      // User finished speaking their answer
+      const timeout = setTimeout(() => {
+        if (answerRef.current.trim()) {
+          startVoicePhase("pre-command");
+        } else {
+          // Nothing captured, try listening again
+          startVoicePhase("answer");
+        }
+      }, 700);
+      return () => clearTimeout(timeout);
+    }
+
+    if (phase === "pre-command" || phase === "post-command") {
+      // Command phase lost listening (timeout/silence) — re-activate
+      const timeout = setTimeout(() => {
+        // Only re-activate if still in the same command phase
+        if (voicePhaseRef.current === phase) {
+          clearTranscript();
+          listen("en");
+        }
+      }, 500);
+      return () => clearTimeout(timeout);
+    }
+  }, [listening]);
+
+  function startVoicePhase(phase: VoicePhase) {
+    if (!list || speaking) {
+      // If still speaking, retry after a short delay
+      if (speaking) {
+        setTimeout(() => startVoicePhase(phase), 300);
+      }
+      return;
+    }
+    // Ensure mic is off before starting a new phase
+    if (listening) {
+      stopListening();
+    }
+    playBeep(phase === "answer" ? 800 : phase === "pre-command" ? 1000 : 600, 120);
+    setVoicePhase(phase);
+    clearTranscript();
+
+    // Listen in target language for answers, English for commands
+    const listenLang = phase === "answer" ? list.targetLanguage : "en";
+    // Delay to avoid catching leftover audio or TTS echo
+    setTimeout(() => {
+      listen(listenLang);
+    }, 400);
+  }
 
   // Navigate to results when completed
   useEffect(() => {
@@ -118,29 +269,44 @@ export default function PracticeScreen() {
     setCountdown(-1);
   }
 
-  function handleSubmit() {
-    if (!answer.trim() || !currentPhrase || !list) return;
-    const result = submitAnswer(answer.trim());
+  function doSubmit(answerText: string) {
+    if (!currentPhrase || !list) return;
+    // Stop listening before TTS feedback
+    if (listening) {
+      stopListening();
+    }
+    const result = submitAnswer(answerText);
     setLastResult(result);
     setAnswer("");
     clearTranscript();
+    setVoicePhase(null);
     recordPhraseResult(list.id, currentPhrase.id, result.isCorrect);
 
-    // Speak feedback in native language, then the correct answer in target language
     const prefix = result.isCorrect ? "Correcto" : "Incorrecto";
     const correctAnswer = currentPhrase.acceptedTranslations[0];
 
     speak(prefix, list.nativeLanguage).then(() => {
       speak(correctAnswer, list.targetLanguage).then(() => {
         startTimer(result.isCorrect ? TIMER_CORRECT_SECONDS : TIMER_INCORRECT_SECONDS);
+        if (voiceMode) {
+          startVoicePhase("post-command");
+        }
       });
     });
+  }
+
+  function handleSubmit() {
+    if (!answer.trim()) return;
+    doSubmit(answer.trim());
   }
 
   function handleNext() {
     stopTimer();
     setCountdown(null);
     setLastResult(null);
+    setVoicePhase(null);
+    clearTranscript();
+    setAnswer("");
     next();
   }
 
@@ -192,6 +358,19 @@ export default function PracticeScreen() {
             {progress.current} / {progress.total}
           </ThemedText>
         </View>
+
+        {/* Voice mode indicator */}
+        {voiceMode && (
+          <View style={styles.voiceIndicator}>
+            <ThemedText type="small" style={styles.voiceIndicatorText}>
+              🎙️ Modo voz
+              {voicePhase === "answer" && " · Escuchando respuesta..."}
+              {voicePhase === "pre-command" && ' · Di: "verify" o "repeat"'}
+              {voicePhase === "post-command" &&
+                ' · Di: "next", "repeat" o "stop"'}
+            </ThemedText>
+          </View>
+        )}
 
         {/* Phrase display */}
         <View style={styles.phraseSection}>
@@ -289,6 +468,17 @@ const styles = StyleSheet.create({
     height: "100%",
     backgroundColor: "#4A90D9",
     borderRadius: 3,
+  },
+  voiceIndicator: {
+    backgroundColor: "#1a1a2e",
+    paddingVertical: Spacing.one,
+    paddingHorizontal: Spacing.two,
+    borderRadius: Spacing.one,
+    alignSelf: "center",
+  },
+  voiceIndicatorText: {
+    color: "#4A90D9",
+    fontWeight: "600",
   },
   phraseSection: {
     flex: 1,

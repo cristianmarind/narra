@@ -9,6 +9,7 @@ interface UseSpeechReturn {
 
 /**
  * Hook wrapping the injected SpeechService for TTS playback.
+ * The returned speak() resolves only after the utterance finishes speaking.
  */
 export function useSpeech(): UseSpeechReturn {
   const { speech } = useServices();
@@ -20,21 +21,7 @@ export function useSpeech(): UseSpeechReturn {
       try {
         await speech.speak(text, language);
       } finally {
-        // expo-speech.speak resolves immediately on some platforms,
-        // poll briefly or just mark as done
-        const isBusy = await speech.isSpeaking();
-        if (!isBusy) {
-          setSpeaking(false);
-        } else {
-          // Poll until done
-          const interval = setInterval(async () => {
-            const still = await speech.isSpeaking();
-            if (!still) {
-              setSpeaking(false);
-              clearInterval(interval);
-            }
-          }, 300);
-        }
+        setSpeaking(false);
       }
     },
     [speech]
