@@ -10,6 +10,7 @@ interface PracticeFeedbackProps {
   countdown: number | null;
   onCancelTimer: () => void;
   onAddAsCorrect: () => void;
+  onReplayAnswer: () => void;
 }
 
 /**
@@ -22,6 +23,7 @@ export function PracticeFeedback({
   countdown,
   onCancelTimer,
   onAddAsCorrect,
+  onReplayAnswer,
 }: PracticeFeedbackProps) {
   return (
     <View
@@ -51,6 +53,16 @@ export function PracticeFeedback({
           </ThemedText>
         )}
       </View>
+
+      {/* Replay correct answer */}
+      <Pressable
+        onPress={onReplayAnswer}
+        style={({ pressed }) => [styles.replayButton, pressed && styles.pressed]}
+      >
+        <ThemedText style={styles.replayButtonText}>
+          🔊 Repetir respuesta
+        </ThemedText>
+      </Pressable>
 
       {!result.isCorrect && (
         <>
@@ -129,6 +141,17 @@ const styles = StyleSheet.create({
     color: "#4A90D9",
     fontSize: 13,
     fontWeight: "600",
+  },
+  replayButton: {
+    alignSelf: "flex-start",
+    paddingVertical: Spacing.one,
+    paddingHorizontal: Spacing.two,
+    borderRadius: Spacing.one,
+    backgroundColor: "#00000010",
+  },
+  replayButtonText: {
+    fontSize: 13,
+    color: "#333",
   },
   pressed: {
     opacity: 0.7,

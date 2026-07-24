@@ -125,7 +125,16 @@ export default function PracticeScreen() {
     setAnswer("");
     clearTranscript();
     recordPhraseResult(list.id, currentPhrase.id, result.isCorrect);
-    startTimer(result.isCorrect ? TIMER_CORRECT_SECONDS : TIMER_INCORRECT_SECONDS);
+
+    // Speak feedback in native language, then the correct answer in target language
+    const prefix = result.isCorrect ? "Correcto" : "Incorrecto";
+    const correctAnswer = currentPhrase.acceptedTranslations[0];
+
+    speak(prefix, list.nativeLanguage).then(() => {
+      speak(correctAnswer, list.targetLanguage).then(() => {
+        startTimer(result.isCorrect ? TIMER_CORRECT_SECONDS : TIMER_INCORRECT_SECONDS);
+      });
+    });
   }
 
   function handleNext() {
@@ -215,6 +224,11 @@ export default function PracticeScreen() {
             countdown={countdown}
             onCancelTimer={handleCancelTimer}
             onAddAsCorrect={handleAddAsCorrect}
+            onReplayAnswer={() => {
+              if (currentPhrase && list) {
+                speak(currentPhrase.acceptedTranslations[0], list.targetLanguage);
+              }
+            }}
           />
         )}
 
