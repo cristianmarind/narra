@@ -14,6 +14,7 @@ import { Spacing } from "@/constants/theme";
 import { usePhraseLists } from "@/hooks/use-phrase-lists";
 import { usePracticeSession } from "@/hooks/use-practice-session";
 import { useSpeech } from "@/hooks/use-speech";
+import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
 import type { PhraseList, PhraseResult } from "@/types";
 
 export default function PracticeScreen() {
@@ -21,6 +22,14 @@ export default function PracticeScreen() {
   const { lists } = usePhraseLists();
   const router = useRouter();
   const { speak, speaking } = useSpeech();
+  const {
+    listening,
+    transcript,
+    available: micAvailable,
+    listen,
+    stop: stopListening,
+    clear: clearTranscript,
+  } = useSpeechRecognition();
   const {
     status,
     currentPhrase,
@@ -53,6 +62,13 @@ export default function PracticeScreen() {
     }
   }, [currentPhrase?.id, status]);
 
+  // Sync speech recognition transcript into the answer field
+  useEffect(() => {
+    if (transcript) {
+      setAnswer(transcript);
+    }
+  }, [transcript]);
+
   // Navigate to results when completed
   useEffect(() => {
     if (status === "completed") {
@@ -67,6 +83,7 @@ export default function PracticeScreen() {
     const result = submitAnswer(answer.trim());
     setLastResult(result);
     setAnswer("");
+    clearTranscript();
   }
 
   function handleNext() {
@@ -77,6 +94,14 @@ export default function PracticeScreen() {
   function handleReplay() {
     if (currentPhrase && list) {
       speak(currentPhrase.nativeSentence, list.nativeLanguage);
+    }
+  }
+
+  function handleMicPress() {
+    if (listening) {
+      stopListening();
+    } else if (list) {
+      listen(list.targetLanguage);
     }
   }
 
@@ -152,15 +177,37 @@ export default function PracticeScreen() {
         <View style={styles.inputSection}>
           {!lastResult ? (
             <>
-              <TextInput
-                style={styles.input}
-                placeholder="Escribe tu traducción..."
-                value={answer}
-                onChangeText={setAnswer}
-                onSubmitEditing={handleSubmit}
-                returnKeyType="send"
-                autoFocus
-              />
+              <View style={styles.inputRow}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Escribe tu traducción..."
+                  placeholderTextColor="#999"
+                  value={answer}
+                  onChangeText={setAnswer}
+                  onSubmitEditing={handleSubmit}
+                  returnKeyType="send"
+                  autoFocus
+                />
+                {micAvailable && (
+                  <Pressable
+                    onPress={handleMicPress}
+                    style={({ pressed }) => [
+                      styles.micButton,
+                      listening && styles.micButtonActive,
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <ThemedText style={styles.micButtonText}>
+                      {listening ? "⏹" : "🎤"}
+                    </ThemedText>
+                  </Pressable>
+                )}
+              </View>
+              {listening && (
+                <ThemedText type="small" style={styles.listeningHint}>
+                  Escuchando...
+                </ThemedText>
+              )}
               <Pressable
                 onPress={handleSubmit}
                 disabled={!answer.trim()}
@@ -265,13 +312,37 @@ const styles = StyleSheet.create({
   inputSection: {
     gap: Spacing.two,
   },
+  inputRow: {
+    flexDirection: "row",
+    gap: Spacing.two,
+    alignItems: "center",
+  },
   input: {
+    flex: 1,
     borderWidth: 1,
     borderColor: "#ccc",
     borderRadius: Spacing.two,
     padding: Spacing.three,
     fontSize: 16,
     color: "#fff",
+  },
+  micButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#F0F0F3",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  micButtonActive: {
+    backgroundColor: "#DC3545",
+  },
+  micButtonText: {
+    fontSize: 20,
+  },
+  listeningHint: {
+    textAlign: "center",
+    color: "#DC3545",
   },
   button: {
     padding: Spacing.three,

@@ -47,3 +47,16 @@ export interface SpeechService {
   stop(): void;
   isSpeaking(): Promise<boolean>;
 }
+
+export interface SpeechRecognitionService {
+  /** Request microphone/recognition permissions. Returns true if granted. */
+  requestPermissions(): Promise<boolean>;
+  /** Start listening for speech in the given language (e.g. "en", "es"). */
+  start(language: string): void;
+  /** Stop listening and finalize the result. */
+  stop(): void;
+  /** Abort listening without finalizing. */
+  abort(): void;
+  /** Whether recognition is available on this platform. */
+  isAvailable(): Promise<boolean>;
+}

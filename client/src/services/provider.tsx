@@ -1,11 +1,13 @@
 import React, { createContext, useContext, useMemo } from "react";
-import type { StorageService, SpeechService } from "@/types";
+import type { StorageService, SpeechService, SpeechRecognitionService } from "@/types";
 import { createAsyncStorageService } from "./storage";
 import { createExpoSpeechService } from "./speech";
+import { createExpoSpeechRecognitionService } from "./speech-recognition";
 
 export interface Services {
   storage: StorageService;
   speech: SpeechService;
+  speechRecognition: SpeechRecognitionService;
 }
 
 const ServicesContext = createContext<Services | null>(null);
@@ -25,6 +27,7 @@ export function ServicesProvider({ children, overrides }: ServicesProviderProps)
     () => ({
       storage: overrides?.storage ?? createAsyncStorageService(),
       speech: overrides?.speech ?? createExpoSpeechService(),
+      speechRecognition: overrides?.speechRecognition ?? createExpoSpeechRecognitionService(),
     }),
     [overrides]
   );
