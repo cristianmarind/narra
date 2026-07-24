@@ -1,61 +1,87 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from "expo-router";
+import {
+  Alert,
+  FlatList,
+  Pressable,
+  StyleSheet,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
-
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
-  return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
+import { Spacing } from "@/constants/theme";
+import { usePhraseLists } from "@/hooks/use-phrase-lists";
+import type { PhraseList } from "@/types";
 
 export default function HomeScreen() {
-  return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
+  const { lists, loading, deleteList } = usePhraseLists();
+  const router = useRouter();
+
+  function handleDelete(list: PhraseList) {
+    Alert.alert(
+      "Eliminar lista",
+      `¿Eliminar "${list.name}"?`,
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Eliminar",
+          style: "destructive",
+          onPress: () => deleteList(list.id),
+        },
+      ]
+    );
+  }
+
+  function renderItem({ item }: { item: PhraseList }) {
+    return (
+      <Pressable
+        onPress={() => router.push(`/list/${item.id}`)}
+        onLongPress={() => handleDelete(item)}
+        style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+      >
+        <ThemedView type="backgroundElement" style={styles.cardInner}>
+          <ThemedText type="subtitle">{item.name}</ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            {item.nativeLanguage.toUpperCase()} → {item.targetLanguage.toUpperCase()}
+          </ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            {item.phrases.length} frase{item.phrases.length !== 1 ? "s" : ""}
           </ThemedText>
         </ThemedView>
+      </Pressable>
+    );
+  }
 
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
-
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
+  return (
+    <ThemedView style={styles.container}>
+      <SafeAreaView style={styles.safe} edges={["bottom"]}>
+        {loading ? (
+          <ThemedText style={styles.center}>Cargando...</ThemedText>
+        ) : lists.length === 0 ? (
+          <View style={styles.empty}>
+            <ThemedText type="subtitle" style={styles.center}>
+              No tienes listas aún
+            </ThemedText>
+            <ThemedText type="small" themeColor="textSecondary" style={styles.center}>
+              Crea tu primera lista para empezar a practicar
+            </ThemedText>
+          </View>
+        ) : (
+          <FlatList
+            data={lists}
+            keyExtractor={(item) => item.id}
+            renderItem={renderItem}
+            contentContainerStyle={styles.listContent}
           />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
+        )}
 
-        {Platform.OS === 'web' && <WebBadge />}
+        <Pressable
+          onPress={() => router.push("/list/create")}
+          style={({ pressed }) => [styles.fab, pressed && styles.pressed]}
+        >
+          <ThemedText style={styles.fabText}>+</ThemedText>
+        </Pressable>
       </SafeAreaView>
     </ThemedView>
   );
@@ -64,35 +90,56 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
   },
-  safeArea: {
+  safe: {
     flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
   },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
+  listContent: {
+    padding: Spacing.three,
+    gap: Spacing.two,
+  },
+  card: {
+    borderRadius: Spacing.two,
+    overflow: "hidden",
+  },
+  cardInner: {
+    padding: Spacing.three,
+    borderRadius: Spacing.two,
+    gap: Spacing.one,
+  },
+  pressed: {
+    opacity: 0.7,
+  },
+  empty: {
     flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: Spacing.two,
+    padding: Spacing.four,
   },
-  title: {
-    textAlign: 'center',
+  center: {
+    textAlign: "center",
   },
-  code: {
-    textTransform: 'uppercase',
+  fab: {
+    position: "absolute",
+    bottom: Spacing.four,
+    right: Spacing.four,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "#4A90D9",
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
   },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
+  fabText: {
+    color: "#fff",
+    fontSize: 28,
+    fontWeight: "bold",
+    marginTop: -2,
   },
 });
