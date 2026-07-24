@@ -76,12 +76,30 @@ export default function HomeScreen() {
           />
         )}
 
-        <Pressable
-          onPress={() => router.push("/list/create")}
-          style={({ pressed }) => [styles.fab, pressed && styles.pressed]}
-        >
-          <ThemedText style={styles.fabText}>+</ThemedText>
-        </Pressable>
+        <View style={styles.actions}>
+          <Pressable
+            onPress={() => router.push("/list/ai-helper")}
+            style={({ pressed }) => [styles.actionButton, pressed && styles.pressed]}
+          >
+            <ThemedText style={styles.actionIcon}>🤖</ThemedText>
+            <ThemedText type="small" style={styles.actionLabel}>IA</ThemedText>
+          </Pressable>
+
+          <Pressable
+            onPress={() => router.push("/list/create")}
+            style={({ pressed }) => [styles.fab, pressed && styles.pressed]}
+          >
+            <ThemedText style={styles.fabText}>+</ThemedText>
+          </Pressable>
+
+          <Pressable
+            onPress={() => router.push("/list/import")}
+            style={({ pressed }) => [styles.actionButton, pressed && styles.pressed]}
+          >
+            <ThemedText style={styles.actionIcon}>📁</ThemedText>
+            <ThemedText type="small" style={styles.actionLabel}>JSON</ThemedText>
+          </Pressable>
+        </View>
       </SafeAreaView>
     </ThemedView>
   );
@@ -121,9 +139,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   fab: {
-    position: "absolute",
-    bottom: Spacing.four,
-    right: Spacing.four,
     width: 56,
     height: 56,
     borderRadius: 28,
@@ -141,5 +156,24 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: "bold",
     marginTop: -2,
+  },
+  actions: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: Spacing.four,
+    paddingVertical: Spacing.three,
+    paddingHorizontal: Spacing.four,
+  },
+  actionButton: {
+    alignItems: "center",
+    gap: 2,
+  },
+  actionIcon: {
+    fontSize: 24,
+  },
+  actionLabel: {
+    color: "#4A90D9",
+    fontWeight: "600",
   },
 });

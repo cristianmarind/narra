@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import {
   Alert,
   FlatList,
+  Platform,
   Pressable,
   StyleSheet,
   View,
@@ -14,10 +15,11 @@ import { ThemedView } from "@/components/themed-view";
 import { Spacing } from "@/constants/theme";
 import { usePhraseLists } from "@/hooks/use-phrase-lists";
 import type { Phrase, PhraseList } from "@/types";
+import { confirm } from "@/utils";
 
 export default function ListDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { lists, deletePhrase } = usePhraseLists();
+  const { lists, deletePhrase, deleteList } = usePhraseLists();
   const router = useRouter();
   const [list, setList] = useState<PhraseList | null>(null);
 
@@ -26,24 +28,33 @@ export default function ListDetailScreen() {
     setList(found);
   }, [lists, id]);
 
+  function handleDeleteList() {
+    if (!list) return;
+    confirm(
+      "Eliminar lista",
+      `¿Estás seguro de eliminar "${list.name}" y todas sus frases? Esta acción no se puede deshacer.`,
+      async () => {
+        await deleteList(list.id);
+        router.replace("/");
+      }
+    );
+  }
+
   function handleDeletePhrase(phrase: Phrase) {
-    Alert.alert(
+    confirm(
       "Eliminar frase",
       `¿Eliminar "${phrase.nativeSentence}"?`,
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: "Eliminar",
-          style: "destructive",
-          onPress: () => deletePhrase(id!, phrase.id),
-        },
-      ]
+      () => deletePhrase(id!, phrase.id)
     );
   }
 
   function handlePractice() {
     if (!list || list.phrases.length === 0) {
-      Alert.alert("Sin frases", "Agrega al menos una frase para practicar");
+      if (Platform.OS === "web") {
+        window.alert("Agrega al menos una frase para practicar");
+      } else {
+        Alert.alert("Sin frases", "Agrega al menos una frase para practicar");
+      }
       return;
     }
     router.push(`/list/${id}/practice`);
@@ -122,6 +133,16 @@ export default function ListDetailScreen() {
             <ThemedText style={styles.primaryButtonText}>Practicar</ThemedText>
           </Pressable>
         </View>
+
+        <Pressable
+          onPress={handleDeleteList}
+          style={({ pressed }) => [
+            styles.deleteButton,
+            pressed && styles.pressed,
+          ]}
+        >
+          <ThemedText style={styles.deleteButtonText}>Eliminar lista</ThemedText>
+        </Pressable>
       </SafeAreaView>
     </ThemedView>
   );
@@ -184,5 +205,16 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.7,
+  },
+  deleteButton: {
+    padding: Spacing.two,
+    alignItems: "center",
+    marginHorizontal: Spacing.three,
+    marginBottom: Spacing.two,
+  },
+  deleteButtonText: {
+    color: "#DC3545",
+    fontSize: 14,
+    fontWeight: "600",
   },
 });

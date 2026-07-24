@@ -26,6 +26,14 @@ export default function RootLayout() {
               name="list/create"
               options={{ title: "Nueva Lista" }}
             />
+            <Stack.Screen
+              name="list/import"
+              options={{ title: "Importar JSON" }}
+            />
+            <Stack.Screen
+              name="list/ai-helper"
+              options={{ title: "Generar con IA" }}
+            />
             <Stack.Screen name="list/[id]/index" options={{ title: "Lista" }} />
             <Stack.Screen
               name="list/[id]/add-phrase"
