@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { useServices } from "@/services";
-import type { Phrase, PhraseList } from "@/types";
+import type { AcceptedTranslation, Phrase, PhraseList, PhraseStats } from "@/types";
 import { generateId } from "@/utils";
 
 interface PhraseListsContextValue {
@@ -12,6 +12,10 @@ interface PhraseListsContextValue {
   addPhrase: (listId: string, nativeSentence: string, acceptedTranslations: string[]) => Promise<void>;
   updatePhrase: (listId: string, phraseId: string, updates: Partial<Pick<Phrase, "nativeSentence" | "acceptedTranslations">>) => Promise<void>;
   deletePhrase: (listId: string, phraseId: string) => Promise<void>;
+  /** Add a user-submitted translation to a phrase (flagged as userAdded) */
+  addUserTranslation: (listId: string, phraseId: string, translation: string) => Promise<void>;
+  /** Increment correct/incorrect stats for a phrase */
+  recordPhraseResult: (listId: string, phraseId: string, isCorrect: boolean) => Promise<void>;
 }
 
 const PhraseListsContext = createContext<PhraseListsContextValue | null>(null);
@@ -118,6 +122,58 @@ export function PhraseListsProvider({ children }: { children: React.ReactNode })
     [storage, refresh]
   );
 
+  const addUserTranslation = useCallback(
+    async (listId: string, phraseId: string, translation: string) => {
+      const list = await storage.getListById(listId);
+      if (!list) return;
+
+      const phrase = list.phrases.find((p) => p.id === phraseId);
+      if (!phrase) return;
+
+      // Add to acceptedTranslations so it validates in future sessions
+      if (!phrase.acceptedTranslations.includes(translation)) {
+        phrase.acceptedTranslations.push(translation);
+      }
+
+      // Also track it as user-added
+      if (!phrase.userTranslations) {
+        phrase.userTranslations = [];
+      }
+      if (!phrase.userTranslations.some((t) => t.text === translation)) {
+        phrase.userTranslations.push({ text: translation, userAdded: true });
+      }
+
+      list.updatedAt = new Date().toISOString();
+      await storage.saveList(list);
+      await refresh();
+    },
+    [storage, refresh]
+  );
+
+  const recordPhraseResult = useCallback(
+    async (listId: string, phraseId: string, isCorrect: boolean) => {
+      const list = await storage.getListById(listId);
+      if (!list) return;
+
+      const phrase = list.phrases.find((p) => p.id === phraseId);
+      if (!phrase) return;
+
+      if (!phrase.stats) {
+        phrase.stats = { correctCount: 0, incorrectCount: 0 };
+      }
+
+      if (isCorrect) {
+        phrase.stats.correctCount++;
+      } else {
+        phrase.stats.incorrectCount++;
+      }
+
+      await storage.saveList(list);
+      await refresh();
+    },
+    [storage, refresh]
+  );
+
   const value: PhraseListsContextValue = {
     lists,
     loading,
@@ -127,6 +183,8 @@ export function PhraseListsProvider({ children }: { children: React.ReactNode })
     addPhrase,
     updatePhrase,
     deletePhrase,
+    addUserTranslation,
+    recordPhraseResult,
   };
 
   return React.createElement(PhraseListsContext.Provider, { value }, children);

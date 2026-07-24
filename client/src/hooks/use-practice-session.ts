@@ -13,6 +13,8 @@ interface UsePracticeSessionReturn {
   score: { correct: number; incorrect: number; percentage: number };
   start: (listId: string, phrases: Phrase[]) => void;
   submitAnswer: (answer: string) => PhraseResult;
+  /** Override the last result for a given phraseId as correct */
+  overrideAsCorrect: (phraseId: string) => void;
   next: () => void;
   reset: () => void;
 }
@@ -85,6 +87,18 @@ export function usePracticeSession(): UsePracticeSessionReturn {
     [session, currentPhrase]
   );
 
+  const overrideAsCorrect = useCallback((phraseId: string) => {
+    setSession((prev) => {
+      if (!prev) return prev;
+      const updatedResults = prev.results.map((r) =>
+        r.phraseId === phraseId && !r.isCorrect
+          ? { ...r, isCorrect: true, overridden: true }
+          : r
+      );
+      return { ...prev, results: updatedResults };
+    });
+  }, []);
+
   const next = useCallback(() => {
     setSession((prev) => {
       if (!prev) return prev;
@@ -116,6 +130,7 @@ export function usePracticeSession(): UsePracticeSessionReturn {
     score,
     start,
     submitAnswer,
+    overrideAsCorrect,
     next,
     reset,
   };

@@ -35,6 +35,7 @@ Devuelve SOLO un JSON válido con este formato exacto (sin explicaciones ni mark
 Reglas:
 - Genera entre 15 y 25 frases relevantes al tema
 - Cada frase debe tener al menos 2 traducciones aceptadas (variaciones naturales)
+- Incluye contracciones y sus formas completas como traducciones separadas (ejemplo: "I'm going" y "I am going", "Where's" y "Where is", "I've" y "I have", etc.)
 - Las frases deben ser de uso cotidiano y progresivas en dificultad
 - No incluyas explicaciones, solo el JSON`;
 }

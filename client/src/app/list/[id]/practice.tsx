@@ -1,15 +1,12 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
-import {
-  Pressable,
-  StyleSheet,
-  TextInput,
-  View,
-} from "react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Pressable, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { AnswerInput } from "@/components/practice/answer-input";
+import { PracticeFeedback } from "@/components/practice/practice-feedback";
 import { Spacing } from "@/constants/theme";
 import { usePhraseLists } from "@/hooks/use-phrase-lists";
 import { usePracticeSession } from "@/hooks/use-practice-session";
@@ -17,9 +14,12 @@ import { useSpeech } from "@/hooks/use-speech";
 import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
 import type { PhraseList, PhraseResult } from "@/types";
 
+const TIMER_CORRECT_SECONDS = 3;
+const TIMER_INCORRECT_SECONDS = 15;
+
 export default function PracticeScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { lists } = usePhraseLists();
+  const { lists, addUserTranslation, recordPhraseResult } = usePhraseLists();
   const router = useRouter();
   const { speak, speaking } = useSpeech();
   const {
@@ -37,6 +37,7 @@ export default function PracticeScreen() {
     score,
     start,
     submitAnswer,
+    overrideAsCorrect,
     next,
   } = usePracticeSession();
 
@@ -44,6 +45,10 @@ export default function PracticeScreen() {
   const [lastResult, setLastResult] = useState<PhraseResult | null>(null);
   const [list, setList] = useState<PhraseList | null>(null);
   const [started, setStarted] = useState(false);
+
+  // Timer state
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Find the list and start session
   useEffect(() => {
@@ -78,17 +83,65 @@ export default function PracticeScreen() {
     }
   }, [status]);
 
+  // Timer logic
+  const startTimer = useCallback((seconds: number) => {
+    stopTimer();
+    setCountdown(seconds);
+    timerRef.current = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev === null || prev <= 1) return 0;
+        return prev - 1;
+      });
+    }, 1000);
+  }, []);
+
+  function stopTimer() {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+  }
+
+  useEffect(() => {
+    if (countdown === 0 && lastResult) {
+      stopTimer();
+      handleNext();
+    }
+  }, [countdown]);
+
+  useEffect(() => {
+    return () => stopTimer();
+  }, []);
+
+  function handleCancelTimer() {
+    stopTimer();
+    setCountdown(-1);
+  }
+
   function handleSubmit() {
-    if (!answer.trim() || !currentPhrase) return;
+    if (!answer.trim() || !currentPhrase || !list) return;
     const result = submitAnswer(answer.trim());
     setLastResult(result);
     setAnswer("");
     clearTranscript();
+    recordPhraseResult(list.id, currentPhrase.id, result.isCorrect);
+    startTimer(result.isCorrect ? TIMER_CORRECT_SECONDS : TIMER_INCORRECT_SECONDS);
   }
 
   function handleNext() {
+    stopTimer();
+    setCountdown(null);
     setLastResult(null);
     next();
+  }
+
+  async function handleAddAsCorrect() {
+    if (!lastResult || !currentPhrase || !list) return;
+    await addUserTranslation(list.id, currentPhrase.id, lastResult.userAnswer);
+    await recordPhraseResult(list.id, currentPhrase.id, true);
+    overrideAsCorrect(currentPhrase.id);
+    setLastResult({ ...lastResult, isCorrect: true, overridden: true });
+    startTimer(TIMER_CORRECT_SECONDS);
   }
 
   function handleReplay() {
@@ -154,87 +207,37 @@ export default function PracticeScreen() {
           </Pressable>
         </View>
 
-        {/* Feedback area */}
-        {lastResult && (
-          <View
-            style={[
-              styles.feedback,
-              lastResult.isCorrect ? styles.feedbackCorrect : styles.feedbackIncorrect,
-            ]}
-          >
-            <ThemedText style={styles.feedbackTitle}>
-              {lastResult.isCorrect ? "✓ Correcto" : "✗ Incorrecto"}
-            </ThemedText>
-            {!lastResult.isCorrect && currentPhrase && (
-              <ThemedText type="small" style={styles.feedbackDetail}>
-                Respuesta esperada: {currentPhrase.acceptedTranslations[0]}
-              </ThemedText>
-            )}
-          </View>
+        {/* Feedback */}
+        {lastResult && currentPhrase && (
+          <PracticeFeedback
+            result={lastResult}
+            phrase={currentPhrase}
+            countdown={countdown}
+            onCancelTimer={handleCancelTimer}
+            onAddAsCorrect={handleAddAsCorrect}
+          />
         )}
 
-        {/* Input / Next area */}
+        {/* Input / Next */}
         <View style={styles.inputSection}>
           {!lastResult ? (
-            <>
-              <View style={styles.inputRow}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Escribe tu traducción..."
-                  placeholderTextColor="#999"
-                  value={answer}
-                  onChangeText={setAnswer}
-                  onSubmitEditing={handleSubmit}
-                  returnKeyType="send"
-                  autoFocus
-                />
-                {micAvailable && (
-                  <Pressable
-                    onPress={handleMicPress}
-                    style={({ pressed }) => [
-                      styles.micButton,
-                      listening && styles.micButtonActive,
-                      pressed && styles.pressed,
-                    ]}
-                  >
-                    <ThemedText style={styles.micButtonText}>
-                      {listening ? "⏹" : "🎤"}
-                    </ThemedText>
-                  </Pressable>
-                )}
-              </View>
-              {listening && (
-                <ThemedText type="small" style={styles.listeningHint}>
-                  Escuchando...
-                </ThemedText>
-              )}
-              <Pressable
-                onPress={handleSubmit}
-                disabled={!answer.trim()}
-                style={({ pressed }) => [
-                  styles.button,
-                  styles.primaryButton,
-                  pressed && styles.pressed,
-                  !answer.trim() && styles.disabled,
-                ]}
-              >
-                <ThemedText style={styles.primaryButtonText}>
-                  Verificar
-                </ThemedText>
-              </Pressable>
-            </>
+            <AnswerInput
+              value={answer}
+              onChangeText={setAnswer}
+              onSubmit={handleSubmit}
+              micAvailable={micAvailable}
+              listening={listening}
+              onMicPress={handleMicPress}
+            />
           ) : (
             <Pressable
               onPress={handleNext}
               style={({ pressed }) => [
                 styles.button,
-                styles.primaryButton,
                 pressed && styles.pressed,
               ]}
             >
-              <ThemedText style={styles.primaryButtonText}>
-                Siguiente →
-              </ThemedText>
+              <ThemedText style={styles.buttonText}>Siguiente →</ThemedText>
             </Pressable>
           )}
         </View>
@@ -291,68 +294,16 @@ const styles = StyleSheet.create({
   speakButtonText: {
     fontSize: 14,
   },
-  feedback: {
-    padding: Spacing.three,
-    borderRadius: Spacing.two,
-    gap: Spacing.one,
-  },
-  feedbackCorrect: {
-    backgroundColor: "#D4EDDA",
-  },
-  feedbackIncorrect: {
-    backgroundColor: "#F8D7DA",
-  },
-  feedbackTitle: {
-    fontWeight: "700",
-    fontSize: 16,
-  },
-  feedbackDetail: {
-    color: "#555",
-  },
   inputSection: {
     gap: Spacing.two,
-  },
-  inputRow: {
-    flexDirection: "row",
-    gap: Spacing.two,
-    alignItems: "center",
-  },
-  input: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: Spacing.two,
-    padding: Spacing.three,
-    fontSize: 16,
-    color: "#fff",
-  },
-  micButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#F0F0F3",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  micButtonActive: {
-    backgroundColor: "#DC3545",
-  },
-  micButtonText: {
-    fontSize: 20,
-  },
-  listeningHint: {
-    textAlign: "center",
-    color: "#DC3545",
   },
   button: {
     padding: Spacing.three,
     borderRadius: Spacing.two,
     alignItems: "center",
-  },
-  primaryButton: {
     backgroundColor: "#4A90D9",
   },
-  primaryButtonText: {
+  buttonText: {
     color: "#fff",
     fontSize: 16,
     fontWeight: "600",

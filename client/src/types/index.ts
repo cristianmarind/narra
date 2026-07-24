@@ -1,9 +1,24 @@
 // ===== Domain Models =====
 
+export interface AcceptedTranslation {
+  text: string;
+  /** true if this translation was added by the user during practice (not from the original list) */
+  userAdded?: boolean;
+}
+
+export interface PhraseStats {
+  correctCount: number;
+  incorrectCount: number;
+}
+
 export interface Phrase {
   id: string;
   nativeSentence: string;
   acceptedTranslations: string[];
+  /** User-added translations during practice sessions */
+  userTranslations?: AcceptedTranslation[];
+  /** Per-phrase accuracy stats */
+  stats?: PhraseStats;
 }
 
 export interface PhraseList {
@@ -22,6 +37,8 @@ export interface PhraseResult {
   phraseId: string;
   userAnswer: string;
   isCorrect: boolean;
+  /** true if the user overrode the result and marked it as correct */
+  overridden?: boolean;
 }
 
 export interface PracticeSession {
