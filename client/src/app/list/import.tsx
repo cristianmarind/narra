@@ -318,7 +318,6 @@ const styles = StyleSheet.create({
     borderRadius: Spacing.two,
     padding: Spacing.three,
     fontSize: 14,
-    color: "#fff",
     minHeight: 120,
     fontFamily: "monospace",
   },

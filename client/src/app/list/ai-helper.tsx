@@ -123,11 +123,13 @@ export default function AiHelperScreen() {
             <ThemedText type="small" themeColor="textSecondary">
               Prompt generado (cópialo y pégalo en tu IA favorita):
             </ThemedText>
-            <ScrollView style={styles.promptBlock} nestedScrollEnabled>
-              <ThemedText type="small" style={styles.promptText}>
-                {prompt}
-              </ThemedText>
-            </ScrollView>
+            <ThemedView type="backgroundElement" style={styles.promptBlock}>
+              <ScrollView nestedScrollEnabled>
+                <ThemedText type="small" style={styles.promptText}>
+                  {prompt}
+                </ThemedText>
+              </ScrollView>
+            </ThemedView>
           </View>
 
           {/* Copy button */}
@@ -204,13 +206,11 @@ const styles = StyleSheet.create({
     borderRadius: Spacing.two,
     padding: Spacing.three,
     fontSize: 16,
-    color: "#fff",
   },
   promptBlock: {
     padding: Spacing.three,
     borderRadius: Spacing.two,
     maxHeight: 300,
-    backgroundColor: "#212225",
   },
   promptText: {
     fontFamily: "monospace",

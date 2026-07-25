@@ -89,7 +89,6 @@ const styles = StyleSheet.create({
     borderRadius: Spacing.two,
     padding: Spacing.three,
     fontSize: 16,
-    color: "#fff",
     minHeight: 60,
     maxHeight: 120,
   },

@@ -112,7 +112,6 @@ const styles = StyleSheet.create({
     padding: Spacing.three,
     fontSize: 16,
     minHeight: 48,
-    color: "#fff",
   },
   button: {
     backgroundColor: "#4A90D9",

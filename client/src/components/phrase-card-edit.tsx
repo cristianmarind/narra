@@ -102,7 +102,6 @@ const styles = StyleSheet.create({
     borderRadius: Spacing.one,
     padding: Spacing.two,
     fontSize: 14,
-    color: "#fff",
     minHeight: 40,
   },
   actions: {
