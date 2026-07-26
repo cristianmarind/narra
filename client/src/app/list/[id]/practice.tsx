@@ -12,6 +12,7 @@ import { usePhraseLists } from "@/hooks/use-phrase-lists";
 import { usePracticeSession } from "@/hooks/use-practice-session";
 import { useSpeech } from "@/hooks/use-speech";
 import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
+import { useServices } from "@/services";
 import type { PhraseList, PhraseResult } from "@/types";
 import { playBeep } from "@/utils";
 
@@ -40,6 +41,7 @@ export default function PracticeScreen() {
   const voiceMode = voiceModeParam === "1";
 
   const { lists, addUserTranslation, recordPhraseResult } = usePhraseLists();
+  const { speech } = useServices();
   const router = useRouter();
   const { speak, speaking } = useSpeech();
   const {
@@ -90,6 +92,12 @@ export default function PracticeScreen() {
     if (found && found.phrases.length > 0 && status === "idle" && !started) {
       setStarted(true);
       start(found.id, found.phrases);
+
+      // Pre-generate TTS audio for all correct answers in background
+      if (speech.pregenerate) {
+        const correctAnswers = found.phrases.map((p) => p.acceptedTranslations[0]);
+        speech.pregenerate(correctAnswers, found.targetLanguage);
+      }
     }
   }, [lists, id, status, start, started]);
 

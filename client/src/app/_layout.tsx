@@ -8,6 +8,7 @@ import { DrawerMenu } from "@/components/drawer-menu";
 import { ThemedText } from "@/components/themed-text";
 import { AppThemeProvider, useAppTheme } from "@/hooks/use-app-theme";
 import { PhraseListsProvider } from "@/hooks/use-phrase-lists";
+import { TtsSpeedProvider } from "@/hooks/use-tts-speed";
 import { ServicesProvider } from "@/services";
 
 SplashScreen.preventAutoHideAsync();
@@ -80,11 +81,13 @@ function RootLayoutInner() {
 export default function RootLayout() {
   return (
     <ServicesProvider>
-      <AppThemeProvider>
-        <PhraseListsProvider>
-          <RootLayoutInner />
-        </PhraseListsProvider>
-      </AppThemeProvider>
+      <TtsSpeedProvider>
+        <AppThemeProvider>
+          <PhraseListsProvider>
+            <RootLayoutInner />
+          </PhraseListsProvider>
+        </AppThemeProvider>
+      </TtsSpeedProvider>
     </ServicesProvider>
   );
 }

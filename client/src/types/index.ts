@@ -63,6 +63,16 @@ export interface SpeechService {
   speak(text: string, language: string): Promise<void>;
   stop(): void;
   isSpeaking(): Promise<boolean>;
+  /** Pre-generate audio for a list of texts in background. Optional — noop if not supported. */
+  pregenerate?(texts: string[], language: string): void;
+  /** Pre-generate and persist first phrases permanently. Optional. */
+  pregeneratePersistent?(texts: string[], language: string, onProgress?: (current: number, total: number, text: string, status: "checking" | "generating" | "cached") => void): Promise<void>;
+  /** Clear session (non-persistent) audio cache. Optional. */
+  clearSessionCache?(): void;
+  /** Clear ALL cache (memory + IndexedDB). Used when settings change. Optional. */
+  clearAllCache?(): Promise<void>;
+  /** Check if model is ready. Optional. */
+  isModelReady?(): boolean;
 }
 
 export interface SpeechRecognitionService {

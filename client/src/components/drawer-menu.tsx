@@ -1,17 +1,36 @@
 import { Pressable, StyleSheet, View, Modal } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
-import { ThemedView } from "@/components/themed-view";
 import { Spacing } from "@/constants/theme";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useTtsSpeed } from "@/hooks/use-tts-speed";
+import { useServices } from "@/services";
 
 interface DrawerMenuProps {
   visible: boolean;
   onClose: () => void;
 }
 
+const SPEED_OPTIONS = [
+  { label: "Muy lenta", value: 0.4 },
+  { label: "Lenta", value: 0.7 },
+  { label: "Normal", value: 0.85 },
+  { label: "Rápida", value: 1.0 },
+];
+
 export function DrawerMenu({ visible, onClose }: DrawerMenuProps) {
   const { theme, mode, setMode } = useAppTheme();
+  const { speed, setSpeed } = useTtsSpeed();
+  const { speech } = useServices();
+
+  async function handleSpeedChange(newSpeed: number) {
+    if (newSpeed === speed) return;
+    setSpeed(newSpeed);
+    // Clear all cache since audio was generated at the old speed
+    if (speech.clearAllCache) {
+      await speech.clearAllCache();
+    }
+  }
 
   return (
     <Modal
@@ -32,24 +51,43 @@ export function DrawerMenu({ visible, onClose }: DrawerMenuProps) {
             <ThemedText type="subtitle">Configuración</ThemedText>
           </View>
 
+          {/* Theme */}
           <View style={styles.section}>
             <ThemedText type="small" themeColor="textSecondary">
               Tema
             </ThemedText>
-            <View style={styles.themeOptions}>
-              <ThemeOption
+            <View style={styles.optionsRow}>
+              <OptionButton
                 label="Claro"
                 active={mode === "light"}
                 onPress={() => setMode("light")}
-                theme={theme}
               />
-              <ThemeOption
+              <OptionButton
                 label="Oscuro"
                 active={mode === "dark"}
                 onPress={() => setMode("dark")}
-                theme={theme}
               />
             </View>
+          </View>
+
+          {/* TTS Speed */}
+          <View style={styles.section}>
+            <ThemedText type="small" themeColor="textSecondary">
+              Velocidad de lectura (inglés)
+            </ThemedText>
+            <View style={styles.optionsRow}>
+              {SPEED_OPTIONS.map((opt) => (
+                <OptionButton
+                  key={opt.value}
+                  label={opt.label}
+                  active={speed === opt.value}
+                  onPress={() => handleSpeedChange(opt.value)}
+                />
+              ))}
+            </View>
+            <ThemedText type="small" themeColor="textSecondary" style={styles.hint}>
+              Al cambiar se regenera el audio cacheado
+            </ThemedText>
           </View>
         </Pressable>
       </Pressable>
@@ -57,31 +95,26 @@ export function DrawerMenu({ visible, onClose }: DrawerMenuProps) {
   );
 }
 
-function ThemeOption({
+function OptionButton({
   label,
   active,
   onPress,
-  theme,
 }: {
   label: string;
   active: boolean;
   onPress: () => void;
-  theme: "light" | "dark";
 }) {
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [
-        styles.themeOption,
-        active && styles.themeOptionActive,
+        styles.option,
+        active && styles.optionActive,
         pressed && styles.pressed,
       ]}
     >
       <ThemedText
-        style={[
-          styles.themeOptionText,
-          active && styles.themeOptionTextActive,
-        ]}
+        style={[styles.optionText, active && styles.optionTextActive]}
       >
         {label}
       </ThemedText>
@@ -114,12 +147,13 @@ const styles = StyleSheet.create({
   },
   section: {
     gap: Spacing.two,
+    marginBottom: Spacing.four,
   },
-  themeOptions: {
+  optionsRow: {
     flexDirection: "row",
     gap: Spacing.two,
   },
-  themeOption: {
+  option: {
     flex: 1,
     paddingVertical: Spacing.two,
     paddingHorizontal: Spacing.two,
@@ -128,17 +162,21 @@ const styles = StyleSheet.create({
     borderColor: "#555",
     alignItems: "center",
   },
-  themeOptionActive: {
+  optionActive: {
     borderColor: "#4A90D9",
     backgroundColor: "#4A90D920",
   },
-  themeOptionText: {
+  optionText: {
     fontSize: 13,
     color: "#888",
   },
-  themeOptionTextActive: {
+  optionTextActive: {
     color: "#4A90D9",
     fontWeight: "600",
+  },
+  hint: {
+    fontSize: 11,
+    fontStyle: "italic",
   },
   pressed: {
     opacity: 0.7,

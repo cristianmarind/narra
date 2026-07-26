@@ -1,4 +1,5 @@
 import { useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import { FlatList, Pressable, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -6,11 +7,64 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Spacing } from "@/constants/theme";
 import { usePhraseLists } from "@/hooks/use-phrase-lists";
+import { useServices } from "@/services";
 import type { PhraseList } from "@/types";
 
 export default function HomeScreen() {
   const { lists, loading } = usePhraseLists();
+  const { speech } = useServices();
   const router = useRouter();
+
+  // TTS warmup state (non-blocking)
+  const [warmupStatus, setWarmupStatus] = useState<string | null>(null);
+
+  // On mount and when lists change, pre-generate first phrases persistently
+  useEffect(() => {
+    if (loading || lists.length === 0 || !speech.pregeneratePersistent) return;
+
+    const firstPhrases: { text: string; language: string; listName: string }[] = [];
+    for (const list of lists) {
+      if (list.phrases.length > 0) {
+        firstPhrases.push({
+          text: list.phrases[0].acceptedTranslations[0],
+          language: list.targetLanguage,
+          listName: list.name,
+        });
+      }
+    }
+
+    if (firstPhrases.length === 0) return;
+
+    // Group by language for batching
+    const byLang = new Map<string, { texts: string[]; names: string[] }>();
+    for (const fp of firstPhrases) {
+      const existing = byLang.get(fp.language) || { texts: [], names: [] };
+      existing.texts.push(fp.text);
+      existing.names.push(fp.listName);
+      byLang.set(fp.language, existing);
+    }
+
+    (async () => {
+      for (const [language, { texts, names }] of byLang) {
+        await speech.pregeneratePersistent!(texts, language, (current, total, text, status) => {
+          if (status === "generating") {
+            setWarmupStatus(`Generando audio: "${names[current - 1]}" (${current}/${total})`);
+          } else if (status === "checking") {
+            setWarmupStatus(`Verificando cache: "${names[current - 1]}" (${current}/${total})`);
+          }
+          // Don't show anything for "cached" — it's instant
+        });
+      }
+      setWarmupStatus(null);
+    })();
+  }, [loading, lists.length]);
+
+  // Clear session cache when returning to home
+  useEffect(() => {
+    if (speech.clearSessionCache) {
+      speech.clearSessionCache();
+    }
+  }, []);
 
   function renderItem({ item }: { item: PhraseList }) {
     return (
@@ -34,6 +88,15 @@ export default function HomeScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safe} edges={["bottom"]}>
+        {/* Non-blocking warmup indicator */}
+        {warmupStatus && (
+          <View style={styles.warmupBanner}>
+            <ThemedText type="small" style={styles.warmupText}>
+              🔊 {warmupStatus}
+            </ThemedText>
+          </View>
+        )}
+
         {loading ? (
           <ThemedText style={styles.center}>Cargando...</ThemedText>
         ) : lists.length === 0 ? (
@@ -71,6 +134,16 @@ const styles = StyleSheet.create({
   },
   safe: {
     flex: 1,
+  },
+  warmupBanner: {
+    backgroundColor: "#1a1a2e",
+    paddingVertical: Spacing.one,
+    paddingHorizontal: Spacing.three,
+    alignItems: "center",
+  },
+  warmupText: {
+    color: "#4A90D9",
+    fontSize: 12,
   },
   listContent: {
     padding: Spacing.three,

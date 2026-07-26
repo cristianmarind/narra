@@ -1,7 +1,7 @@
-import React, { createContext, useContext, useMemo } from "react";
+import React, { createContext, useContext, useRef, useState } from "react";
 import type { StorageService, SpeechService, SpeechRecognitionService } from "@/types";
 import { createAsyncStorageService } from "./storage";
-import { createExpoSpeechService } from "./speech";
+import { createDefaultSpeechService } from "./create-speech";
 import { createExpoSpeechRecognitionService } from "./speech-recognition";
 
 export interface Services {
@@ -12,25 +12,20 @@ export interface Services {
 
 const ServicesContext = createContext<Services | null>(null);
 
+/** Shared mutable ref for TTS speed — updated by TtsSpeedProvider */
+export const ttsSpeedRef = { current: 0.85 };
+
 interface ServicesProviderProps {
   children: React.ReactNode;
-  /** Override default implementations for testing or future backends */
   overrides?: Partial<Services>;
 }
 
-/**
- * Wraps the app and provides injectable services via React Context.
- * Pass `overrides` to swap implementations (e.g. in tests or when backend is ready).
- */
 export function ServicesProvider({ children, overrides }: ServicesProviderProps) {
-  const services = useMemo<Services>(
-    () => ({
-      storage: overrides?.storage ?? createAsyncStorageService(),
-      speech: overrides?.speech ?? createExpoSpeechService(),
-      speechRecognition: overrides?.speechRecognition ?? createExpoSpeechRecognitionService(),
-    }),
-    [overrides]
-  );
+  const [services] = useState<Services>(() => ({
+    storage: overrides?.storage ?? createAsyncStorageService(),
+    speech: overrides?.speech ?? createDefaultSpeechService(() => ttsSpeedRef.current),
+    speechRecognition: overrides?.speechRecognition ?? createExpoSpeechRecognitionService(),
+  }));
 
   return (
     <ServicesContext.Provider value={services}>
@@ -39,9 +34,6 @@ export function ServicesProvider({ children, overrides }: ServicesProviderProps)
   );
 }
 
-/**
- * Hook to consume injected services. Must be used within ServicesProvider.
- */
 export function useServices(): Services {
   const ctx = useContext(ServicesContext);
   if (!ctx) {

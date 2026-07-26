@@ -13,12 +13,14 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Spacing } from "@/constants/theme";
 import { usePhraseLists } from "@/hooks/use-phrase-lists";
+import { useServices } from "@/services";
 import type { PhraseList } from "@/types";
 import { confirm } from "@/utils";
 
 export default function ListDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { lists, deleteList } = usePhraseLists();
+  const { speech } = useServices();
   const router = useRouter();
   const [list, setList] = useState<PhraseList | null>(null);
   const [voiceMode, setVoiceMode] = useState(false);
@@ -26,6 +28,12 @@ export default function ListDetailScreen() {
   useEffect(() => {
     const found = lists.find((l) => l.id === id) ?? null;
     setList(found);
+
+    // Pre-generate first 5 phrase answers in background while user views the list
+    if (found && found.phrases.length > 0 && speech.pregenerate) {
+      const firstAnswers = found.phrases.slice(0, 5).map((p) => p.acceptedTranslations[0]);
+      speech.pregenerate(firstAnswers, found.targetLanguage);
+    }
   }, [lists, id]);
 
   function handleDeleteList() {
