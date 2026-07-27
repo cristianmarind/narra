@@ -7,7 +7,7 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { AnswerInput } from "@/components/practice/answer-input";
 import { PracticeFeedback } from "@/components/practice/practice-feedback";
-import { Spacing } from "@/constants/theme";
+import { Brand, Spacing } from "@/constants/theme";
 import {
   FEEDBACK_CORRECT,
   FEEDBACK_INCORRECT,
@@ -504,18 +504,18 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: "100%",
-    backgroundColor: "#4A90D9",
+    backgroundColor: Brand.accent,
     borderRadius: 3,
   },
   voiceIndicator: {
-    backgroundColor: "#1a1a2e",
+    backgroundColor: Brand.primary,
     paddingVertical: Spacing.one,
     paddingHorizontal: Spacing.two,
     borderRadius: Spacing.one,
     alignSelf: "center",
   },
   voiceIndicatorText: {
-    color: "#4A90D9",
+    color: Brand.accentSoft,
     fontWeight: "600",
   },
   phraseSection: {
@@ -543,7 +543,7 @@ const styles = StyleSheet.create({
     padding: Spacing.three,
     borderRadius: Spacing.two,
     alignItems: "center",
-    backgroundColor: "#4A90D9",
+    backgroundColor: Brand.accent,
   },
   buttonText: {
     color: "#fff",

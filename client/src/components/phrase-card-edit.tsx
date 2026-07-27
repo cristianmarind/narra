@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, TextInput, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-import { Spacing } from "@/constants/theme";
+import { Brand, Spacing } from "@/constants/theme";
 import type { Phrase } from "@/types";
 
 interface PhraseCardEditProps {
@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
     borderRadius: Spacing.two,
     gap: Spacing.two,
     borderWidth: 1,
-    borderColor: "#4A90D9",
+    borderColor: Brand.accent,
   },
   field: {
     gap: Spacing.one,
@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   saveButton: {
-    backgroundColor: "#4A90D9",
+    backgroundColor: Brand.accent,
   },
   saveText: {
     color: "#fff",

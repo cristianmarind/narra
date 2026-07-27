@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
-import { Spacing } from "@/constants/theme";
+import { Brand, Spacing } from "@/constants/theme";
 import type { Phrase, PhraseResult } from "@/types";
 
 interface PracticeFeedbackProps {
@@ -134,11 +134,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.two,
     borderRadius: Spacing.one,
     borderWidth: 1,
-    borderColor: "#4A90D9",
+    borderColor: Brand.accent,
     marginTop: Spacing.one,
   },
   overrideButtonText: {
-    color: "#4A90D9",
+    color: Brand.accent,
     fontSize: 13,
     fontWeight: "600",
   },

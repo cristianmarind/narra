@@ -2,7 +2,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-import { Spacing } from "@/constants/theme";
+import { Brand, Spacing } from "@/constants/theme";
 import type { Phrase } from "@/types";
 
 interface PhraseCardViewProps {
@@ -55,11 +55,11 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   statCorrect: {
-    color: "#28A745",
+    color: Brand.success,
     fontWeight: "600",
   },
   statIncorrect: {
-    color: "#DC3545",
+    color: Brand.error,
     fontWeight: "600",
   },
   pressed: {

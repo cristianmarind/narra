@@ -13,7 +13,7 @@ import * as Clipboard from "expo-clipboard";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-import { Spacing } from "@/constants/theme";
+import { Brand, Spacing } from "@/constants/theme";
 
 function buildPrompt(topic: string, nativeLang: string, targetLang: string): string {
   return `Genera una lista de frases para practicar "${topic}" traduciendo de ${nativeLang} a ${targetLang}.
@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   primaryButton: {
-    backgroundColor: "#4A90D9",
+    backgroundColor: Brand.accent,
   },
   primaryButtonText: {
     color: "#fff",

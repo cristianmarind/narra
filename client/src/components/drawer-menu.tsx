@@ -1,7 +1,8 @@
 import { Pressable, StyleSheet, View, Modal } from "react-native";
 
+import { NarraLogo } from "@/components/narra-logo";
 import { ThemedText } from "@/components/themed-text";
-import { Spacing } from "@/constants/theme";
+import { Brand, Spacing } from "@/constants/theme";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useTtsSpeed } from "@/hooks/use-tts-speed";
 import { useServices } from "@/services";
@@ -48,7 +49,10 @@ export function DrawerMenu({ visible, onClose }: DrawerMenuProps) {
           onPress={(e) => e.stopPropagation()}
         >
           <View style={styles.header}>
-            <ThemedText type="subtitle">Configuración</ThemedText>
+            <NarraLogo size={34} variant={theme === "dark" ? "dark" : "light"} />
+            <ThemedText type="small" themeColor="textSecondary">
+              Configuración
+            </ThemedText>
           </View>
 
           {/* Theme */}
@@ -140,6 +144,7 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   header: {
+    gap: Spacing.two,
     paddingBottom: Spacing.four,
     borderBottomWidth: 1,
     borderBottomColor: "#333",
@@ -163,15 +168,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   optionActive: {
-    borderColor: "#4A90D9",
-    backgroundColor: "#4A90D920",
+    borderColor: Brand.accent,
+    backgroundColor: `${Brand.accent}20`,
   },
   optionText: {
     fontSize: 13,
     color: "#888",
   },
   optionTextActive: {
-    color: "#4A90D9",
+    color: Brand.accent,
     fontWeight: "600",
   },
   hint: {

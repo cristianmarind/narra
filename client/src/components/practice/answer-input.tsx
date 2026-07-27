@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, TextInput, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
-import { Spacing } from "@/constants/theme";
+import { Brand, Spacing } from "@/constants/theme";
 
 interface AnswerInputProps {
   value: string;
@@ -102,20 +102,20 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   micButtonActive: {
-    backgroundColor: "#DC3545",
+    backgroundColor: Brand.error,
   },
   micButtonText: {
     fontSize: 20,
   },
   listeningHint: {
     textAlign: "center",
-    color: "#DC3545",
+    color: Brand.error,
   },
   button: {
     padding: Spacing.three,
     borderRadius: Spacing.two,
     alignItems: "center",
-    backgroundColor: "#4A90D9",
+    backgroundColor: Brand.accent,
   },
   buttonText: {
     color: "#fff",

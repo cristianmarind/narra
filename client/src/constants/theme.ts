@@ -7,6 +7,24 @@ import '@/global.css';
 
 import { Platform } from 'react-native';
 
+/**
+ * Narra brand palette.
+ * Taken from the logo assets in `assets/brand/`.
+ */
+export const Brand = {
+  /** Primary — rgb(38, 33, 92). Deep indigo, used for the dark logo and app chrome */
+  primary: '#26215C',
+  /** The violet from the light logo mark, used for interactive elements */
+  accent: '#534AB7',
+  /** Soft lavender from the dark logo bars, for accents on dark surfaces */
+  accentSoft: '#AFA9EC',
+  /** Text/icons placed on top of primary or accent fills */
+  onPrimary: '#FFFFFF',
+  /** Feedback colors */
+  success: '#28A745',
+  error: '#DC3545',
+} as const;
+
 export const Colors = {
   light: {
     text: '#000000',
@@ -14,6 +32,12 @@ export const Colors = {
     backgroundElement: '#F0F0F3',
     backgroundSelected: '#E0E1E6',
     textSecondary: '#60646C',
+    /** Interactive elements: buttons, links, active states */
+    tint: Brand.accent,
+    /** Filled surfaces that carry the brand, e.g. banners */
+    brandSurface: Brand.primary,
+    /** Content on top of brandSurface */
+    onBrandSurface: Brand.accentSoft,
   },
   dark: {
     text: '#ffffff',
@@ -21,6 +45,9 @@ export const Colors = {
     backgroundElement: '#212225',
     backgroundSelected: '#2E3135',
     textSecondary: '#B0B4BA',
+    tint: Brand.accentSoft,
+    brandSurface: Brand.primary,
+    onBrandSurface: Brand.accentSoft,
   },
 } as const;
 

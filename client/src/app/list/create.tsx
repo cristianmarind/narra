@@ -11,7 +11,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-import { Spacing } from "@/constants/theme";
+import { Brand, Spacing } from "@/constants/theme";
 import { usePhraseLists } from "@/hooks/use-phrase-lists";
 
 export default function CreateListScreen() {
@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   button: {
-    backgroundColor: "#4A90D9",
+    backgroundColor: Brand.accent,
     padding: Spacing.three,
     borderRadius: Spacing.two,
     alignItems: "center",

@@ -7,7 +7,7 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { PhraseCardView } from "@/components/phrase-card-view";
 import { PhraseCardEdit } from "@/components/phrase-card-edit";
-import { Spacing } from "@/constants/theme";
+import { Brand, Spacing } from "@/constants/theme";
 import { usePhraseLists } from "@/hooks/use-phrase-lists";
 import type { Phrase, PhraseList } from "@/types";
 import { confirm } from "@/utils";
@@ -141,10 +141,10 @@ const styles = StyleSheet.create({
     borderRadius: Spacing.two,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#4A90D9",
+    borderColor: Brand.accent,
   },
   addButtonText: {
-    color: "#4A90D9",
+    color: Brand.accent,
     fontSize: 16,
     fontWeight: "600",
   },

@@ -5,8 +5,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-import { Spacing } from "@/constants/theme";
+import { Brand, Spacing } from "@/constants/theme";
 import { fixedPromptsFor } from "@/constants/speech-prompts";
+import { NarraLogo } from "@/components/narra-logo";
 import { usePhraseLists } from "@/hooks/use-phrase-lists";
 import { useServices } from "@/services";
 import type { PhraseList } from "@/types";
@@ -126,6 +127,7 @@ export default function HomeScreen() {
           <ThemedText style={styles.center}>Cargando...</ThemedText>
         ) : lists.length === 0 ? (
           <View style={styles.empty}>
+            <NarraLogo size={56} />
             <ThemedText type="subtitle" style={styles.center}>
               No tienes listas aún
             </ThemedText>
@@ -161,13 +163,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   warmupBanner: {
-    backgroundColor: "#1a1a2e",
+    backgroundColor: Brand.primary,
     paddingVertical: Spacing.one,
     paddingHorizontal: Spacing.three,
     alignItems: "center",
   },
   warmupText: {
-    color: "#4A90D9",
+    color: Brand.accentSoft,
     fontSize: 12,
   },
   listContent: {
@@ -203,7 +205,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: "#4A90D9",
+    backgroundColor: Brand.accent,
     justifyContent: "center",
     alignItems: "center",
     elevation: 4,

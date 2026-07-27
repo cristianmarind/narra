@@ -16,7 +16,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-import { Spacing } from "@/constants/theme";
+import { Brand, Spacing } from "@/constants/theme";
 import { usePhraseLists } from "@/hooks/use-phrase-lists";
 import { useServices } from "@/services";
 
@@ -173,7 +173,7 @@ export default function ImportListScreen() {
         {loading && (
           <View style={styles.overlay}>
             <View style={styles.overlayContent}>
-              <ActivityIndicator size="large" color="#4A90D9" />
+              <ActivityIndicator size="large" color={Brand.accentSoft} />
               <ThemedText style={styles.overlayText}>Importando lista...</ThemedText>
             </View>
           </View>
@@ -301,10 +301,10 @@ const styles = StyleSheet.create({
   },
   secondaryButton: {
     borderWidth: 1,
-    borderColor: "#4A90D9",
+    borderColor: Brand.accent,
   },
   secondaryButtonText: {
-    color: "#4A90D9",
+    color: Brand.accent,
     fontSize: 16,
     fontWeight: "600",
   },
@@ -350,7 +350,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
   },
   helperLinkText: {
-    color: "#4A90D9",
+    color: Brand.accent,
     fontSize: 14,
     fontWeight: "600",
   },

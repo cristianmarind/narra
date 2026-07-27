@@ -11,7 +11,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-import { Spacing } from "@/constants/theme";
+import { Brand, Spacing } from "@/constants/theme";
 import { usePhraseLists } from "@/hooks/use-phrase-lists";
 import { useServices } from "@/services";
 import type { PhraseList } from "@/types";
@@ -197,18 +197,18 @@ const styles = StyleSheet.create({
     gap: Spacing.one,
   },
   accuracyText: {
-    color: "#4A90D9",
+    color: Brand.accent,
   },
   statsRow: {
     flexDirection: "row",
     gap: Spacing.four,
   },
   statCorrect: {
-    color: "#28A745",
+    color: Brand.success,
     fontWeight: "600",
   },
   statIncorrect: {
-    color: "#DC3545",
+    color: Brand.error,
     fontWeight: "600",
   },
   actions: {
@@ -227,15 +227,15 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 4,
     borderWidth: 2,
-    borderColor: "#4A90D9",
+    borderColor: Brand.accent,
     justifyContent: "center",
     alignItems: "center",
   },
   checkboxActive: {
-    backgroundColor: "#4A90D9",
+    backgroundColor: Brand.accent,
   },
   checkmark: {
-    color: "#fff",
+    color: Brand.onPrimary,
     fontSize: 14,
     fontWeight: "bold",
   },
@@ -249,19 +249,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   primaryButton: {
-    backgroundColor: "#4A90D9",
+    backgroundColor: Brand.accent,
   },
   primaryButtonText: {
-    color: "#fff",
+    color: Brand.onPrimary,
     fontSize: 16,
     fontWeight: "600",
   },
   secondaryButton: {
     borderWidth: 1,
-    borderColor: "#4A90D9",
+    borderColor: Brand.accent,
   },
   secondaryButtonText: {
-    color: "#4A90D9",
+    color: Brand.accent,
     fontSize: 16,
     fontWeight: "600",
   },
