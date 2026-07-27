@@ -8,6 +8,12 @@ import { ThemedView } from "@/components/themed-view";
 import { AnswerInput } from "@/components/practice/answer-input";
 import { PracticeFeedback } from "@/components/practice/practice-feedback";
 import { Spacing } from "@/constants/theme";
+import {
+  FEEDBACK_CORRECT,
+  FEEDBACK_INCORRECT,
+  buildIntro,
+  fixedPromptsFor,
+} from "@/constants/speech-prompts";
 import { usePhraseLists } from "@/hooks/use-phrase-lists";
 import { usePracticeSession } from "@/hooks/use-practice-session";
 import { useSpeech } from "@/hooks/use-speech";
@@ -18,29 +24,6 @@ import { playBeep } from "@/utils";
 
 const TIMER_CORRECT_SECONDS = 3;
 const TIMER_INCORRECT_SECONDS = 15;
-
-/**
- * Spanish names for target languages, used in the spoken intro.
- * Lowercase on purpose: TTS engines tend to spell out uppercase words.
- */
-const LANGUAGE_NAMES: Record<string, string> = {
-  en: "inglés",
-  es: "español",
-  fr: "francés",
-  it: "italiano",
-  pt: "portugués",
-  de: "alemán",
-};
-
-function languageName(code: string): string {
-  const base = code.toLowerCase().split(/[-_]/)[0];
-  return LANGUAGE_NAMES[base] ?? code;
-}
-
-/** Spoken once, before the first phrase of the session */
-function buildIntro(targetLanguage: string): string {
-  return `Traduce al ${languageName(targetLanguage)} las frases, empecemos con la primera.`;
-}
 
 /**
  * Voice mode phases:
@@ -126,9 +109,12 @@ export default function PracticeScreen() {
           found.phrases.map((p) => p.acceptedTranslations[0]),
           found.targetLanguage
         );
-        // Native language: the intro plus every prompt sentence
+        // Native language: the fixed app phrases plus every prompt sentence
         speech.pregenerate(
-          [buildIntro(found.targetLanguage), ...found.phrases.map((p) => p.nativeSentence)],
+          [
+            ...fixedPromptsFor(found.targetLanguage),
+            ...found.phrases.map((p) => p.nativeSentence),
+          ],
           found.nativeLanguage
         );
       }
@@ -334,7 +320,7 @@ export default function PracticeScreen() {
     setVoicePhase(null);
     recordPhraseResult(list.id, currentPhrase.id, result.isCorrect);
 
-    const prefix = result.isCorrect ? "Correcto" : "Incorrecto";
+    const prefix = result.isCorrect ? FEEDBACK_CORRECT : FEEDBACK_INCORRECT;
     const correctAnswer = currentPhrase.acceptedTranslations[0];
 
     speak(prefix, list.nativeLanguage).then(() => {

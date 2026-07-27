@@ -6,6 +6,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Spacing } from "@/constants/theme";
+import { fixedPromptsFor } from "@/constants/speech-prompts";
 import { usePhraseLists } from "@/hooks/use-phrase-lists";
 import { useServices } from "@/services";
 import type { PhraseList } from "@/types";
@@ -18,49 +19,63 @@ export default function HomeScreen() {
   // TTS warmup state (non-blocking)
   const [warmupStatus, setWarmupStatus] = useState<string | null>(null);
 
-  // On mount and when lists change, pre-generate first phrases persistently
+  // On mount and when lists change, persist the audio that's always needed:
+  // the app's fixed phrases first, then the first phrase of each list.
   useEffect(() => {
     if (loading || lists.length === 0 || !speech.pregeneratePersistent) return;
 
-    const firstPhrases: { text: string; language: string; listName: string }[] = [];
+    // { text, language, label } — label is what the warmup banner shows
+    const queue: { text: string; language: string; label: string }[] = [];
+    const seen = new Set<string>();
+
+    const enqueue = (text: string, language: string, label: string) => {
+      if (!text) return;
+      const key = `${language}::${text}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      queue.push({ text, language, label });
+    };
+
+    // Fixed app phrases ("Correcto", "Incorrecto", the intro) go first so they
+    // are always available, no matter which list the user opens.
+    for (const list of lists) {
+      for (const prompt of fixedPromptsFor(list.targetLanguage)) {
+        enqueue(prompt, list.nativeLanguage, "mensajes de la app");
+      }
+    }
+
     for (const list of lists) {
       if (list.phrases.length === 0) continue;
+      const first = list.phrases[0];
 
       // Target language: the expected answer, read back during feedback
-      firstPhrases.push({
-        text: list.phrases[0].acceptedTranslations[0],
-        language: list.targetLanguage,
-        listName: list.name,
-      });
+      enqueue(first.acceptedTranslations[0], list.targetLanguage, list.name);
 
       // Native language: the prompt sentence, read at the start of every round.
       // Warming it here also triggers the Spanish model download up front, so the
       // first practice round doesn't stall waiting for it.
-      firstPhrases.push({
-        text: list.phrases[0].nativeSentence,
-        language: list.nativeLanguage,
-        listName: list.name,
-      });
+      enqueue(first.nativeSentence, list.nativeLanguage, list.name);
     }
 
-    if (firstPhrases.length === 0) return;
+    if (queue.length === 0) return;
 
-    // Group by language for batching
-    const byLang = new Map<string, { texts: string[]; names: string[] }>();
-    for (const fp of firstPhrases) {
-      const existing = byLang.get(fp.language) || { texts: [], names: [] };
-      existing.texts.push(fp.text);
-      existing.names.push(fp.listName);
-      byLang.set(fp.language, existing);
+    // Batch per language, preserving the order above
+    const byLang = new Map<string, { texts: string[]; labels: string[] }>();
+    for (const item of queue) {
+      const existing = byLang.get(item.language) ?? { texts: [], labels: [] };
+      existing.texts.push(item.text);
+      existing.labels.push(item.label);
+      byLang.set(item.language, existing);
     }
 
     (async () => {
-      for (const [language, { texts, names }] of byLang) {
+      for (const [language, { texts, labels }] of byLang) {
         await speech.pregeneratePersistent!(texts, language, (current, total, text, status) => {
+          const label = labels[current - 1];
           if (status === "generating") {
-            setWarmupStatus(`Generando audio: "${names[current - 1]}" (${current}/${total})`);
+            setWarmupStatus(`Generando audio: "${label}" (${current}/${total})`);
           } else if (status === "checking") {
-            setWarmupStatus(`Verificando cache: "${names[current - 1]}" (${current}/${total})`);
+            setWarmupStatus(`Verificando cache: "${label}" (${current}/${total})`);
           }
           // Don't show anything for "cached" — it's instant
         });
