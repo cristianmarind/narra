@@ -1,10 +1,14 @@
 /**
  * Kokoro TTS Web Worker
  * Loads kokoro-js from CDN, generates audio, sends Float32Array back to main thread.
+ * Uses fp16 model for maximum audio quality and naturalness.
  */
 
 const MODEL_ID = "onnx-community/Kokoro-82M-v1.0-ONNX";
 const KOKORO_CDN = "https://cdn.jsdelivr.net/npm/kokoro-js@1.2.1/+esm";
+
+/** Kokoro always outputs 24 kHz */
+const KOKORO_SAMPLE_RATE = 24000;
 
 let tts = null;
 let loadPromise = null;
@@ -30,7 +34,7 @@ async function loadModel() {
 
       log("Loading model: " + MODEL_ID);
       tts = await KokoroTTS.from_pretrained(MODEL_ID, {
-        dtype: "q8",
+        dtype: "fp16",
         device: "wasm",
         progress_callback: (progress) => {
           if (progress.status === "progress" && progress.progress != null) {
@@ -96,8 +100,11 @@ self.onmessage = async (event) => {
         return;
       }
 
-      log("Sending audio, length: " + waveform.length + " samples (" + (waveform.length / 24000).toFixed(2) + "s)");
-      self.postMessage({ type: "audio", id, audio: waveform }, [waveform.buffer]);
+      // kokoro-js reports the rate on the result; fall back to the known default
+      const sampleRate = result.sampling_rate || KOKORO_SAMPLE_RATE;
+
+      log("Sending audio, length: " + waveform.length + " samples @ " + sampleRate + "Hz (" + (waveform.length / sampleRate).toFixed(2) + "s)");
+      self.postMessage({ type: "audio", id, audio: waveform, sampleRate }, [waveform.buffer]);
     } catch (err) {
       log("ERROR in speak: " + err.message);
       self.postMessage({ type: "error", id, error: err.message || String(err) });

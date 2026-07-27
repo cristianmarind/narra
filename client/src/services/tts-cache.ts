@@ -1,10 +1,22 @@
 /**
  * Persistent TTS audio cache using IndexedDB.
+ *
+ * Entries store the waveform together with its sample rate, because different
+ * engines produce different rates (Kokoro 24 kHz, Piper voices 22.05 kHz).
+ * Legacy entries that hold a bare Float32Array are read as 24 kHz.
  */
 
 const DB_NAME = "kokoro_tts_cache";
 const STORE_NAME = "audio";
 const DB_VERSION = 1;
+
+/** Sample rate assumed for cache entries written before rates were stored */
+const LEGACY_SAMPLE_RATE = 24000;
+
+export interface CachedAudio {
+  audio: Float32Array;
+  sampleRate: number;
+}
 
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -20,11 +32,40 @@ function openDB(): Promise<IDBDatabase> {
   });
 }
 
-export async function persistAudio(key: string, audio: Float32Array): Promise<void> {
+/** Coerce whatever IndexedDB returned into a CachedAudio, or null. */
+function parseStored(result: unknown): CachedAudio | null {
+  if (!result) return null;
+
+  // Current format: { audio, sampleRate }
+  if (typeof result === "object" && "audio" in (result as object)) {
+    const record = result as { audio: unknown; sampleRate?: number };
+    const audio = toFloat32(record.audio);
+    if (!audio) return null;
+    return { audio, sampleRate: record.sampleRate ?? LEGACY_SAMPLE_RATE };
+  }
+
+  // Legacy format: bare Float32Array
+  const audio = toFloat32(result);
+  return audio ? { audio, sampleRate: LEGACY_SAMPLE_RATE } : null;
+}
+
+function toFloat32(value: unknown): Float32Array | null {
+  if (value instanceof Float32Array) return value;
+  if (value && typeof value === "object" && "buffer" in (value as object)) {
+    return new Float32Array((value as ArrayBufferView).buffer);
+  }
+  return null;
+}
+
+export async function persistAudio(
+  key: string,
+  audio: Float32Array,
+  sampleRate: number
+): Promise<void> {
   try {
     const db = await openDB();
     const tx = db.transaction(STORE_NAME, "readwrite");
-    tx.objectStore(STORE_NAME).put(audio, key);
+    tx.objectStore(STORE_NAME).put({ audio, sampleRate }, key);
     await new Promise<void>((resolve, reject) => {
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error);
@@ -34,18 +75,13 @@ export async function persistAudio(key: string, audio: Float32Array): Promise<vo
   }
 }
 
-export async function loadPersistedAudio(key: string): Promise<Float32Array | null> {
+export async function loadPersistedAudio(key: string): Promise<CachedAudio | null> {
   try {
     const db = await openDB();
     const tx = db.transaction(STORE_NAME, "readonly");
     const request = tx.objectStore(STORE_NAME).get(key);
     return new Promise((resolve) => {
-      request.onsuccess = () => {
-        const result = request.result;
-        if (result instanceof Float32Array) resolve(result);
-        else if (result && result.buffer) resolve(new Float32Array(result.buffer));
-        else resolve(null);
-      };
+      request.onsuccess = () => resolve(parseStored(request.result));
       request.onerror = () => resolve(null);
     });
   } catch {

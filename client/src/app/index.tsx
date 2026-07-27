@@ -24,13 +24,23 @@ export default function HomeScreen() {
 
     const firstPhrases: { text: string; language: string; listName: string }[] = [];
     for (const list of lists) {
-      if (list.phrases.length > 0) {
-        firstPhrases.push({
-          text: list.phrases[0].acceptedTranslations[0],
-          language: list.targetLanguage,
-          listName: list.name,
-        });
-      }
+      if (list.phrases.length === 0) continue;
+
+      // Target language: the expected answer, read back during feedback
+      firstPhrases.push({
+        text: list.phrases[0].acceptedTranslations[0],
+        language: list.targetLanguage,
+        listName: list.name,
+      });
+
+      // Native language: the prompt sentence, read at the start of every round.
+      // Warming it here also triggers the Spanish model download up front, so the
+      // first practice round doesn't stall waiting for it.
+      firstPhrases.push({
+        text: list.phrases[0].nativeSentence,
+        language: list.nativeLanguage,
+        listName: list.name,
+      });
     }
 
     if (firstPhrases.length === 0) return;

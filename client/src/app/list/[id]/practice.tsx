@@ -20,6 +20,29 @@ const TIMER_CORRECT_SECONDS = 3;
 const TIMER_INCORRECT_SECONDS = 15;
 
 /**
+ * Spanish names for target languages, used in the spoken intro.
+ * Lowercase on purpose: TTS engines tend to spell out uppercase words.
+ */
+const LANGUAGE_NAMES: Record<string, string> = {
+  en: "inglés",
+  es: "español",
+  fr: "francés",
+  it: "italiano",
+  pt: "portugués",
+  de: "alemán",
+};
+
+function languageName(code: string): string {
+  const base = code.toLowerCase().split(/[-_]/)[0];
+  return LANGUAGE_NAMES[base] ?? code;
+}
+
+/** Spoken once, before the first phrase of the session */
+function buildIntro(targetLanguage: string): string {
+  return `Traduce al ${languageName(targetLanguage)} las frases, empecemos con la primera.`;
+}
+
+/**
  * Voice mode phases:
  * - "answer": listening for the user's translation
  * - "pre-command": listening for "verify" or "repeat"
@@ -77,6 +100,9 @@ export default function PracticeScreen() {
   const voicePhaseRef = useRef<VoicePhase>(null);
   const answerRef = useRef("");
 
+  // The intro is spoken only before the first phrase of the session
+  const introSpokenRef = useRef(false);
+
   // Keep refs in sync
   useEffect(() => {
     voicePhaseRef.current = voicePhase;
@@ -93,15 +119,24 @@ export default function PracticeScreen() {
       setStarted(true);
       start(found.id, found.phrases);
 
-      // Pre-generate TTS audio for all correct answers in background
+      // Pre-generate TTS audio in the background so rounds don't wait on it
       if (speech.pregenerate) {
-        const correctAnswers = found.phrases.map((p) => p.acceptedTranslations[0]);
-        speech.pregenerate(correctAnswers, found.targetLanguage);
+        // Target language: the expected answers, read during feedback
+        speech.pregenerate(
+          found.phrases.map((p) => p.acceptedTranslations[0]),
+          found.targetLanguage
+        );
+        // Native language: the intro plus every prompt sentence
+        speech.pregenerate(
+          [buildIntro(found.targetLanguage), ...found.phrases.map((p) => p.nativeSentence)],
+          found.nativeLanguage
+        );
       }
     }
   }, [lists, id, status, start, started]);
 
-  // Auto-speak the native sentence when phrase changes, then activate voice mode
+  // Auto-speak the native sentence when phrase changes, then activate voice mode.
+  // On the very first phrase, an intro is read before it.
   useEffect(() => {
     if (currentPhrase && list && status === "active" && !lastResult) {
       // Stop listening before TTS speaks to avoid capturing the app's own voice
@@ -109,7 +144,16 @@ export default function PracticeScreen() {
         stopListening();
       }
       setVoicePhase(null);
-      speak(currentPhrase.nativeSentence, list.nativeLanguage).then(() => {
+
+      const withIntro = !introSpokenRef.current;
+      introSpokenRef.current = true;
+
+      (async () => {
+        if (withIntro) {
+          await speak(buildIntro(list.targetLanguage), list.nativeLanguage);
+        }
+        await speak(currentPhrase.nativeSentence, list.nativeLanguage);
+      })().then(() => {
         if (voiceMode) {
           startVoicePhase("answer");
         }

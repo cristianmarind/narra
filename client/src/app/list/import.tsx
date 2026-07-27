@@ -3,6 +3,7 @@ import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system";
 import { useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Platform,
   Pressable,
@@ -17,8 +18,7 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Spacing } from "@/constants/theme";
 import { usePhraseLists } from "@/hooks/use-phrase-lists";
-import type { PhraseList } from "@/types";
-import { generateId } from "@/utils";
+import { useServices } from "@/services";
 
 /**
  * Expected JSON format:
@@ -68,9 +68,42 @@ function validateImportedData(data: unknown): data is ImportedList {
 export default function ImportListScreen() {
   const router = useRouter();
   const { createList, addPhrase } = usePhraseLists();
+  const { speech } = useServices();
   const [loading, setLoading] = useState(false);
-  const [preview, setPreview] = useState<ImportedList | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [jsonText, setJsonText] = useState("");
+
+  async function importList(data: ImportedList) {
+    setLoading(true);
+
+    try {
+      const list = await createList(data.name, data.nativeLanguage, data.targetLanguage);
+
+      for (const phrase of data.phrases) {
+        await addPhrase(list.id, phrase.nativeSentence, phrase.acceptedTranslations);
+      }
+
+      // Show success message briefly
+      setSuccessMessage(`"${data.name}" importada con ${data.phrases.length} frases`);
+
+      // Pre-generate first phrase audio in background (fire-and-forget)
+      if (speech.pregeneratePersistent && data.phrases.length > 0) {
+        const firstText = data.phrases[0].acceptedTranslations[0];
+        speech.pregeneratePersistent([firstText], data.targetLanguage).catch(() => {
+          // Silently ignore errors — audio will be generated on demand later
+        });
+      }
+
+      // Navigate to home after a short delay so user sees the success message
+      setTimeout(() => {
+        router.replace("/");
+      }, 1500);
+    } catch (error) {
+      Alert.alert("Error", "Hubo un problema al importar la lista.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   function handleParseText() {
     if (!jsonText.trim()) {
@@ -89,9 +122,8 @@ export default function ImportListScreen() {
         return;
       }
 
-      setPreview(parsed);
       setJsonText("");
-      Alert.alert("JSON cargado", `"${parsed.name}" con ${parsed.phrases.length} frases. Revisa la vista previa abajo.`);
+      importList(parsed);
     } catch (error) {
       Alert.alert("Error", "El texto no es un JSON válido.");
     }
@@ -128,38 +160,32 @@ export default function ImportListScreen() {
         return;
       }
 
-      setPreview(parsed);
+      importList(parsed);
     } catch (error) {
       Alert.alert("Error", "No se pudo leer el archivo. Asegúrate de que sea un JSON válido.");
-    }
-  }
-
-  async function handleImport() {
-    if (!preview) return;
-    setLoading(true);
-
-    try {
-      const list = await createList(preview.name, preview.nativeLanguage, preview.targetLanguage);
-
-      for (const phrase of preview.phrases) {
-        await addPhrase(list.id, phrase.nativeSentence, phrase.acceptedTranslations);
-      }
-
-      Alert.alert(
-        "Importado",
-        `Lista "${preview.name}" importada con ${preview.phrases.length} frases.`,
-        [{ text: "OK", onPress: () => router.replace(`/list/${list.id}`) }]
-      );
-    } catch (error) {
-      Alert.alert("Error", "Hubo un problema al importar la lista.");
-    } finally {
-      setLoading(false);
     }
   }
 
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safe} edges={["bottom"]}>
+        {/* Loading overlay */}
+        {loading && (
+          <View style={styles.overlay}>
+            <View style={styles.overlayContent}>
+              <ActivityIndicator size="large" color="#4A90D9" />
+              <ThemedText style={styles.overlayText}>Importando lista...</ThemedText>
+            </View>
+          </View>
+        )}
+
+        {/* Success message */}
+        {successMessage && (
+          <View style={styles.successBanner}>
+            <ThemedText style={styles.successText}>✓ {successMessage}</ThemedText>
+          </View>
+        )}
+
         <ScrollView contentContainerStyle={styles.content}>
           {/* Instructions */}
           <View style={styles.section}>
@@ -225,55 +251,10 @@ export default function ImportListScreen() {
               ]}
             >
               <ThemedText style={styles.secondaryButtonText}>
-                Cargar JSON
+                Importar JSON
               </ThemedText>
             </Pressable>
           </View>
-
-          {/* Preview */}
-          {preview && (
-            <View style={styles.section}>
-              <ThemedText type="subtitle">Vista previa</ThemedText>
-              <ThemedView type="backgroundElement" style={styles.previewCard}>
-                <ThemedText>
-                  {preview.name}
-                </ThemedText>
-                <ThemedText type="small" themeColor="textSecondary">
-                  {preview.nativeLanguage.toUpperCase()} → {preview.targetLanguage.toUpperCase()} · {preview.phrases.length} frases
-                </ThemedText>
-              </ThemedView>
-
-              {/* Show first 5 phrases */}
-              {preview.phrases.slice(0, 5).map((p, i) => (
-                <ThemedView key={i} type="backgroundElement" style={styles.phrasePreview}>
-                  <ThemedText type="small">{p.nativeSentence}</ThemedText>
-                  <ThemedText type="small" themeColor="textSecondary">
-                    → {p.acceptedTranslations.join(" / ")}
-                  </ThemedText>
-                </ThemedView>
-              ))}
-              {preview.phrases.length > 5 && (
-                <ThemedText type="small" themeColor="textSecondary" style={styles.moreText}>
-                  ...y {preview.phrases.length - 5} frases más
-                </ThemedText>
-              )}
-
-              <Pressable
-                onPress={handleImport}
-                disabled={loading}
-                style={({ pressed }) => [
-                  styles.button,
-                  styles.primaryButton,
-                  pressed && styles.pressed,
-                  loading && styles.disabled,
-                ]}
-              >
-                <ThemedText style={styles.primaryButtonText}>
-                  {loading ? "Importando..." : "Importar lista"}
-                </ThemedText>
-              </Pressable>
-            </View>
-          )}
         </ScrollView>
       </SafeAreaView>
     </ThemedView>
@@ -294,14 +275,6 @@ const styles = StyleSheet.create({
   section: {
     gap: Spacing.two,
   },
-  codeBlock: {
-    padding: Spacing.three,
-    borderRadius: Spacing.two,
-  },
-  codeText: {
-    fontFamily: "monospace",
-    fontSize: 12,
-  },
   divider: {
     flexDirection: "row",
     alignItems: "center",
@@ -321,32 +294,10 @@ const styles = StyleSheet.create({
     minHeight: 120,
     fontFamily: "monospace",
   },
-  previewCard: {
-    padding: Spacing.three,
-    borderRadius: Spacing.two,
-    gap: Spacing.one,
-  },
-  phrasePreview: {
-    padding: Spacing.two,
-    borderRadius: Spacing.one,
-    gap: 2,
-  },
-  moreText: {
-    textAlign: "center",
-    fontStyle: "italic",
-  },
   button: {
     padding: Spacing.three,
     borderRadius: Spacing.two,
     alignItems: "center",
-  },
-  primaryButton: {
-    backgroundColor: "#4A90D9",
-  },
-  primaryButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
   },
   secondaryButton: {
     borderWidth: 1,
@@ -362,6 +313,33 @@ const styles = StyleSheet.create({
   },
   disabled: {
     opacity: 0.4,
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 10,
+  },
+  overlayContent: {
+    alignItems: "center",
+    gap: Spacing.three,
+  },
+  overlayText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  successBanner: {
+    backgroundColor: "#1a3d2a",
+    paddingVertical: Spacing.three,
+    paddingHorizontal: Spacing.four,
+    alignItems: "center",
+  },
+  successText: {
+    color: "#4ADE80",
+    fontSize: 16,
+    fontWeight: "600",
   },
   helperLink: {
     paddingVertical: Spacing.two,

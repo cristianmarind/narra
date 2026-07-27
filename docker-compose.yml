@@ -1,0 +1,23 @@
+services:
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./client/src:/app/src
+      - ./client/assets:/app/assets
+      - ./client/public:/app/public
+      - ./client/app.json:/app/app.json
+      - ./client/tsconfig.json:/app/tsconfig.json
+      - ./client/metro.config.js:/app/metro.config.js
+    environment:
+      - EXPO_USE_FAST_RESOLVER=1
+      - BROWSER=none
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
+      - EXPO_USE_METRO_WORKSPACE_ROOT=1
+      - METRO_WATCHMAN_ENABLE=false
+    stdin_open: true
+    tty: true
