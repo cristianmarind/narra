@@ -96,11 +96,16 @@ interface EngineSpec {
   eager: boolean;
 }
 
+// Workers live in /public, so their URL must include the deploy base path
+// (e.g. "/narra" on GitHub Pages). Inlined at build time from app.json's
+// experiments.baseUrl; empty in dev.
+const BASE_URL = (process.env.EXPO_BASE_URL || "").replace(/\/$/, "");
+
 const ENGINES: Record<EngineId, EngineSpec> = {
   // Kokoro accepts a `speed` argument and is small enough to preload
-  kokoro: { workerUrl: "/kokoro-worker.js", speedInGeneration: true, eager: true },
+  kokoro: { workerUrl: `${BASE_URL}/kokoro-worker.js`, speedInGeneration: true, eager: true },
   // vits-web exposes no speed control, and the voice is ~63 MB — load on demand
-  piper: { workerUrl: "/piper-worker.js", speedInGeneration: false, eager: false },
+  piper: { workerUrl: `${BASE_URL}/piper-worker.js`, speedInGeneration: false, eager: false },
 };
 
 interface Route {
