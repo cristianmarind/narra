@@ -109,7 +109,7 @@ export default function PracticeScreen() {
   const { level: userLevel } = useUserLevel();
   const colors = useTheme();
   const router = useRouter();
-  const { speak, speakFixed, speaking } = useSpeech();
+  const { speak, speakFixed, speaking, stop: stopSpeaking } = useSpeech();
   const {
     listening,
     transcript,
@@ -148,6 +148,17 @@ export default function PracticeScreen() {
 
   // The intro is spoken only before the first phrase of the session
   const introSpokenRef = useRef(false);
+
+  // Bumped when the user advances or leaves; speech chains capture the value
+  // at their start and bail if it changed, so stopping the current utterance
+  // also cancels the queued ones instead of letting them overlap the next
+  // phrase's audio
+  const speechEpochRef = useRef(0);
+
+  function cancelSpeech() {
+    speechEpochRef.current++;
+    stopSpeaking();
+  }
 
   // Keep refs in sync
   useEffect(() => {
@@ -238,12 +249,15 @@ export default function PracticeScreen() {
       const withIntro = !introSpokenRef.current;
       introSpokenRef.current = true;
 
+      const epoch = speechEpochRef.current;
       (async () => {
         if (withIntro) {
           await speakFixed(buildIntro(list.targetLanguage), list.nativeLanguage);
         }
+        if (speechEpochRef.current !== epoch) return;
         await speak(currentPhrase.nativeSentence, list.nativeLanguage);
       })().then(() => {
+        if (speechEpochRef.current !== epoch) return;
         if (voiceMode) {
           startVoicePhase("answer");
         }
@@ -403,8 +417,14 @@ export default function PracticeScreen() {
     }
   }, [countdown]);
 
+  // Unmount covers every way out of the screen (✕, browser/Android back):
+  // silence the TTS so it doesn't keep talking over the list or the lobby
   useEffect(() => {
-    return () => stopTimer();
+    return () => {
+      stopTimer();
+      speechEpochRef.current++;
+      speech.stop();
+    };
   }, []);
 
   // Enter advances to the next phrase, matching the hint shown next to the button.
@@ -448,8 +468,11 @@ export default function PracticeScreen() {
     const prefix = result.isCorrect ? FEEDBACK_CORRECT : FEEDBACK_INCORRECT;
     const correctAnswer = currentPhrase.acceptedTranslations[0];
 
+    const epoch = speechEpochRef.current;
     speakFixed(prefix, list.nativeLanguage).then(() => {
+      if (speechEpochRef.current !== epoch) return;
       speak(correctAnswer, list.targetLanguage).then(() => {
+        if (speechEpochRef.current !== epoch) return;
         startTimer(result.isCorrect ? TIMER_CORRECT_SECONDS : TIMER_INCORRECT_SECONDS);
         if (voiceMode) {
           startVoicePhase("post-command");
@@ -464,6 +487,8 @@ export default function PracticeScreen() {
   }
 
   function handleNext() {
+    // Cut any feedback still being read so it can't overlap the next phrase
+    cancelSpeech();
     stopTimer();
     setCountdown(null);
     setLastResult(null);
@@ -500,6 +525,7 @@ export default function PracticeScreen() {
 
   /** Leaves the session. Results already recorded are kept. */
   function handleExit() {
+    cancelSpeech();
     stopTimer();
     if (listening) stopListening();
     router.replace(`/list/${id}`);
