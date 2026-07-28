@@ -30,6 +30,7 @@ export default function ListDetailScreen() {
   const router = useRouter();
   const [list, setList] = useState<PhraseList | null>(null);
   const [voiceMode, setVoiceMode] = useState(false);
+  const [randomOrder, setRandomOrder] = useState(false);
 
   useEffect(() => {
     const found = lists.find((l) => l.id === id) ?? null;
@@ -63,7 +64,9 @@ export default function ListDetailScreen() {
       }
       return;
     }
-    router.push(`/list/${id}/practice?voiceMode=${voiceMode ? "1" : "0"}`);
+    router.push(
+      `/list/${id}/practice?voiceMode=${voiceMode ? "1" : "0"}&random=${randomOrder ? "1" : "0"}`
+    );
   }
 
   if (!list) {
@@ -179,6 +182,26 @@ export default function ListDetailScreen() {
                   </View>
                   <Text style={[styles.voiceToggleText, { color: colors.textSecondary }]}>
                     Modo voz (manos libres)
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => setRandomOrder(!randomOrder)}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: randomOrder }}
+                  style={({ pressed }) => [styles.voiceToggle, pressed && styles.pressed]}
+                >
+                  <View
+                    style={[
+                      styles.checkbox,
+                      { borderColor: Brand.accent },
+                      randomOrder && styles.checkboxActive,
+                    ]}
+                  >
+                    {randomOrder && <Text style={styles.checkmark}>✓</Text>}
+                  </View>
+                  <Text style={[styles.voiceToggleText, { color: colors.textSecondary }]}>
+                    Orden aleatorio
                   </Text>
                 </Pressable>
 

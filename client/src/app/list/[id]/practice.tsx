@@ -25,7 +25,7 @@ import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
 import { useTheme } from "@/hooks/use-theme";
 import { useServices } from "@/services";
 import type { PhraseList, PhraseResult } from "@/types";
-import { playBeep } from "@/utils";
+import { playBeep, shuffle } from "@/utils";
 
 const TIMER_CORRECT_SECONDS = 3;
 const TIMER_INCORRECT_SECONDS = 15;
@@ -45,11 +45,13 @@ const TIMER_INCORRECT_SECONDS = 15;
 type VoicePhase = "answer" | "pre-command" | "post-command" | null;
 
 export default function PracticeScreen() {
-  const { id, voiceMode: voiceModeParam } = useLocalSearchParams<{
+  const { id, voiceMode: voiceModeParam, random: randomParam } = useLocalSearchParams<{
     id: string;
     voiceMode?: string;
+    random?: string;
   }>();
   const voiceMode = voiceModeParam === "1";
+  const randomOrder = randomParam === "1";
 
   const { lists, addUserTranslation, recordPhraseResult } = usePhraseLists();
   const { speech } = useServices();
@@ -106,7 +108,7 @@ export default function PracticeScreen() {
     setList(found);
     if (found && found.phrases.length > 0 && status === "idle" && !started) {
       setStarted(true);
-      start(found.id, found.phrases);
+      start(found.id, randomOrder ? shuffle(found.phrases) : found.phrases);
 
       // Pre-generate TTS audio in the background so rounds don't wait on it
       if (speech.pregenerate) {

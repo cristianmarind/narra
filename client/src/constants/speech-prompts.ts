@@ -7,11 +7,11 @@
  * All of them are spoken in the user's native language.
  */
 
-/** Spoken as feedback when the answer is right */
-export const FEEDBACK_CORRECT = "Correcto";
+/** Spoken as feedback when the answer is right, followed by the correct answer */
+export const FEEDBACK_CORRECT = "Correcto, se dice:";
 
-/** Spoken as feedback when the answer is wrong */
-export const FEEDBACK_INCORRECT = "Incorrecto";
+/** Spoken as feedback when the answer is wrong, followed by the correct answer */
+export const FEEDBACK_INCORRECT = "Incorrecto, se dice:";
 
 /**
  * Spanish names for target languages, used in the spoken intro.
