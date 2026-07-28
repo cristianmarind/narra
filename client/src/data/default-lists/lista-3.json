@@ -1,0 +1,182 @@
+{
+  "name": "Inglés básico - Nivel 3 (Intermedio)",
+  "nativeLanguage": "español",
+  "targetLanguage": "inglés",
+  "phrases": [
+    {
+      "nativeSentence": "¿A qué te dedicas?",
+      "acceptedTranslations": [
+        "What do you do?",
+        "What do you do for a living?"
+      ]
+    },
+    {
+      "nativeSentence": "Trabajo como ingeniero de software.",
+      "acceptedTranslations": [
+        "I work as a software engineer.",
+        "I'm a software engineer."
+      ]
+    },
+    {
+      "nativeSentence": "¿Cuánto tiempo llevas estudiando inglés?",
+      "acceptedTranslations": [
+        "How long have you been studying English?",
+        "How long have you studied English?"
+      ]
+    },
+    {
+      "nativeSentence": "He estado aprendiendo inglés durante dos años.",
+      "acceptedTranslations": [
+        "I've been learning English for two years.",
+        "I have been learning English for two years."
+      ]
+    },
+    {
+      "nativeSentence": "Normalmente me levanto temprano.",
+      "acceptedTranslations": [
+        "I usually wake up early.",
+        "I normally wake up early."
+      ]
+    },
+    {
+      "nativeSentence": "Estoy trabajando en un proyecto nuevo.",
+      "acceptedTranslations": [
+        "I'm working on a new project.",
+        "I am working on a new project."
+      ]
+    },
+    {
+      "nativeSentence": "Ayer terminé mi trabajo temprano.",
+      "acceptedTranslations": [
+        "I finished my work early yesterday.",
+        "Yesterday I finished my work early."
+      ]
+    },
+    {
+      "nativeSentence": "¿Has visitado otro país alguna vez?",
+      "acceptedTranslations": [
+        "Have you ever visited another country?",
+        "Have you ever been to another country?"
+      ]
+    },
+    {
+      "nativeSentence": "Todavía no he terminado.",
+      "acceptedTranslations": [
+        "I haven't finished yet.",
+        "I have not finished yet."
+      ]
+    },
+    {
+      "nativeSentence": "¿Podrías ayudarme con este problema?",
+      "acceptedTranslations": [
+        "Could you help me with this problem?",
+        "Can you help me with this problem?"
+      ]
+    },
+    {
+      "nativeSentence": "Si tengo tiempo, iré contigo.",
+      "acceptedTranslations": [
+        "If I have time, I'll go with you.",
+        "If I have time, I will go with you."
+      ]
+    },
+    {
+      "nativeSentence": "Creo que esta es la mejor opción.",
+      "acceptedTranslations": [
+        "I think this is the best option.",
+        "I believe this is the best option."
+      ]
+    },
+    {
+      "nativeSentence": "Prefiero trabajar desde casa.",
+      "acceptedTranslations": [
+        "I prefer working from home.",
+        "I prefer to work from home."
+      ]
+    },
+    {
+      "nativeSentence": "Siempre intento aprender algo nuevo.",
+      "acceptedTranslations": [
+        "I always try to learn something new.",
+        "I always try learning something new."
+      ]
+    },
+    {
+      "nativeSentence": "¿Qué harías en esta situación?",
+      "acceptedTranslations": [
+        "What would you do in this situation?",
+        "What would you do if you were in this situation?"
+      ]
+    },
+    {
+      "nativeSentence": "Es importante mantener la calma.",
+      "acceptedTranslations": [
+        "It's important to stay calm.",
+        "It is important to remain calm."
+      ]
+    },
+    {
+      "nativeSentence": "No estoy seguro de la respuesta.",
+      "acceptedTranslations": [
+        "I'm not sure about the answer.",
+        "I am not sure about the answer."
+      ]
+    },
+    {
+      "nativeSentence": "Podemos resolver este problema juntos.",
+      "acceptedTranslations": [
+        "We can solve this problem together.",
+        "We can figure this problem out together."
+      ]
+    },
+    {
+      "nativeSentence": "Me habría gustado saber eso antes.",
+      "acceptedTranslations": [
+        "I wish I had known that earlier.",
+        "I would've liked to know that sooner."
+      ]
+    },
+    {
+      "nativeSentence": "Cuanto más practico, más confianza tengo.",
+      "acceptedTranslations": [
+        "The more I practice, the more confident I become.",
+        "The more I practice, the more confidence I have."
+      ]
+    },
+    {
+      "nativeSentence": "Aunque fue difícil, nunca me rendí.",
+      "acceptedTranslations": [
+        "Even though it was difficult, I never gave up.",
+        "Although it was hard, I never gave up."
+      ]
+    },
+    {
+      "nativeSentence": "Estoy buscando una oportunidad para crecer profesionalmente.",
+      "acceptedTranslations": [
+        "I'm looking for an opportunity to grow professionally.",
+        "I am looking for a chance to grow professionally."
+      ]
+    },
+    {
+      "nativeSentence": "¿Puedes explicarlo de otra manera?",
+      "acceptedTranslations": [
+        "Can you explain it in another way?",
+        "Could you explain it differently?"
+      ]
+    },
+    {
+      "nativeSentence": "Estoy de acuerdo contigo.",
+      "acceptedTranslations": [
+        "I agree with you.",
+        "I completely agree with you."
+      ]
+    },
+    {
+      "nativeSentence": "Eso tiene mucho sentido.",
+      "acceptedTranslations": [
+        "That makes a lot of sense.",
+        "That makes sense."
+      ]
+    }
+  ]
+}

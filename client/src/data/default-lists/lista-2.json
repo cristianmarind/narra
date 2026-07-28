@@ -1,0 +1,176 @@
+{
+  "name": "Inglés básico - Nivel 2 (Principiante)",
+  "nativeLanguage": "español",
+  "targetLanguage": "inglés",
+  "phrases": [
+    {
+      "nativeSentence": "Nosotros",
+      "acceptedTranslations": [
+        "We"
+      ]
+    },
+    {
+      "nativeSentence": "Ellos",
+      "acceptedTranslations": [
+        "They"
+      ]
+    },
+    {
+      "nativeSentence": "Somos / Estamos",
+      "acceptedTranslations": [
+        "We are",
+        "We're"
+      ]
+    },
+    {
+      "nativeSentence": "Son / Están",
+      "acceptedTranslations": [
+        "They are",
+        "They're"
+      ]
+    },
+    {
+      "nativeSentence": "Casa",
+      "acceptedTranslations": [
+        "House",
+        "Home"
+      ]
+    },
+    {
+      "nativeSentence": "Carro",
+      "acceptedTranslations": [
+        "Car",
+        "Automobile"
+      ]
+    },
+    {
+      "nativeSentence": "Escuela",
+      "acceptedTranslations": [
+        "School"
+      ]
+    },
+    {
+      "nativeSentence": "Trabajo",
+      "acceptedTranslations": [
+        "Work",
+        "Job"
+      ]
+    },
+    {
+      "nativeSentence": "Amigo",
+      "acceptedTranslations": [
+        "Friend"
+      ]
+    },
+    {
+      "nativeSentence": "Comida",
+      "acceptedTranslations": [
+        "Food"
+      ]
+    },
+    {
+      "nativeSentence": "Mi amigo",
+      "acceptedTranslations": [
+        "My friend"
+      ]
+    },
+    {
+      "nativeSentence": "Nuestra casa",
+      "acceptedTranslations": [
+        "Our house",
+        "Our home"
+      ]
+    },
+    {
+      "nativeSentence": "Ellos están en la escuela.",
+      "acceptedTranslations": [
+        "They are at school.",
+        "They're at school."
+      ]
+    },
+    {
+      "nativeSentence": "Nosotros estamos en casa.",
+      "acceptedTranslations": [
+        "We are at home.",
+        "We're at home."
+      ]
+    },
+    {
+      "nativeSentence": "Mi amigo tiene un carro.",
+      "acceptedTranslations": [
+        "My friend has a car.",
+        "My friend has an automobile."
+      ]
+    },
+    {
+      "nativeSentence": "Ella tiene un perro.",
+      "acceptedTranslations": [
+        "She has a dog.",
+        "She's got a dog."
+      ]
+    },
+    {
+      "nativeSentence": "Él tiene un gato.",
+      "acceptedTranslations": [
+        "He has a cat.",
+        "He's got a cat."
+      ]
+    },
+    {
+      "nativeSentence": "Me gusta la comida.",
+      "acceptedTranslations": [
+        "I like food.",
+        "I enjoy food."
+      ]
+    },
+    {
+      "nativeSentence": "Quiero ir a casa.",
+      "acceptedTranslations": [
+        "I want to go home.",
+        "I'd like to go home."
+      ]
+    },
+    {
+      "nativeSentence": "Necesitamos un doctor.",
+      "acceptedTranslations": [
+        "We need a doctor.",
+        "We need the doctor."
+      ]
+    },
+    {
+      "nativeSentence": "Ellos trabajan en un hospital.",
+      "acceptedTranslations": [
+        "They work at a hospital.",
+        "They're working at a hospital."
+      ]
+    },
+    {
+      "nativeSentence": "Mi familia vive en esta casa.",
+      "acceptedTranslations": [
+        "My family lives in this house.",
+        "My family lives in this home."
+      ]
+    },
+    {
+      "nativeSentence": "Ella está en el hotel con su familia.",
+      "acceptedTranslations": [
+        "She is at the hotel with her family.",
+        "She's at the hotel with her family."
+      ]
+    },
+    {
+      "nativeSentence": "Nos gusta escuchar música.",
+      "acceptedTranslations": [
+        "We like listening to music.",
+        "We like to listen to music."
+      ]
+    },
+    {
+      "nativeSentence": "Estamos listos para comenzar.",
+      "acceptedTranslations": [
+        "We are ready to start.",
+        "We're ready to start."
+      ]
+    }
+  ]
+}

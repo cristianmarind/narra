@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Linking, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -154,6 +154,10 @@ export default function PracticeScreen() {
   // also cancels the queued ones instead of letting them overlap the next
   // phrase's audio
   const speechEpochRef = useRef(0);
+
+  // Voice phases must never (re)activate the microphone once the screen lost
+  // focus — every activation path checks this first
+  const isFocusedRef = useRef(true);
 
   function cancelSpeech() {
     speechEpochRef.current++;
@@ -358,6 +362,8 @@ export default function PracticeScreen() {
   }, [listening]);
 
   function startVoicePhase(phase: VoicePhase) {
+    // Never reopen the mic on a screen the user already left
+    if (!isFocusedRef.current) return;
     if (!list || speaking) {
       // If still speaking, retry after a short delay
       if (speaking) {
@@ -375,9 +381,10 @@ export default function PracticeScreen() {
 
     // Listen in target language for answers, English for commands
     const listenLang = phase === "answer" ? list.targetLanguage : "en";
-    // Delay to avoid catching leftover audio or TTS echo
+    // Delay to avoid catching leftover audio or TTS echo; the guard covers a
+    // blur happening inside that delay
     setTimeout(() => {
-      listen(listenLang);
+      if (isFocusedRef.current) listen(listenLang);
     }, 400);
   }
 
@@ -417,15 +424,24 @@ export default function PracticeScreen() {
     }
   }, [countdown]);
 
-  // Unmount covers every way out of the screen (✕, browser/Android back):
-  // silence the TTS so it doesn't keep talking over the list or the lobby
-  useEffect(() => {
-    return () => {
-      stopTimer();
-      speechEpochRef.current++;
-      speech.stop();
-    };
-  }, []);
+  // Blur, not unmount: the sidebar navigates with push(), which keeps this
+  // screen mounted underneath the new one — an unmount cleanup would never
+  // fire. Losing focus by any route (✕, sidebar, back) must silence the TTS,
+  // kill queued speech chains, and release the microphone.
+  useFocusEffect(
+    useCallback(() => {
+      isFocusedRef.current = true;
+      return () => {
+        isFocusedRef.current = false;
+        stopTimer();
+        speechEpochRef.current++;
+        speech.stop();
+        stopListening();
+        setVoicePhase(null);
+        clearTranscript();
+      };
+    }, [speech, stopListening, clearTranscript])
+  );
 
   // Enter advances to the next phrase, matching the hint shown next to the button.
   // The answer field handles Enter itself via onSubmitEditing, so this only runs
@@ -451,6 +467,9 @@ export default function PracticeScreen() {
 
   function doSubmit(answerText: string) {
     if (!currentPhrase || !list) return;
+    // The phrase may still be being read (user answered early): cut it and
+    // invalidate its chain so it can't overlap the feedback audio below
+    cancelSpeech();
     // Stop listening before TTS feedback
     if (listening) {
       stopListening();
@@ -601,6 +620,14 @@ export default function PracticeScreen() {
             </Text>
             <ThemedText style={styles.phrase}>{currentPhrase?.nativeSentence}</ThemedText>
 
+            {/* Learning mode: the expected answer stays visible while typing.
+                Hidden once feedback is up — it already shows the answer. */}
+            {list.showTranslation && currentPhrase && !lastResult && (
+              <Text style={[styles.revealedTranslation, { color: colors.textSecondary }]}>
+                💡 {currentPhrase.acceptedTranslations[0]}
+              </Text>
+            )}
+
             <Pressable
               onPress={handleReplay}
               disabled={speaking}
@@ -750,6 +777,12 @@ const styles = StyleSheet.create({
     fontSize: 22,
     lineHeight: 30,
     fontWeight: "600",
+    textAlign: "center",
+  },
+  revealedTranslation: {
+    fontSize: 16,
+    lineHeight: 22,
+    fontStyle: "italic",
     textAlign: "center",
   },
   listen: {

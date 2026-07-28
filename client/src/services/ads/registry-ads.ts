@@ -33,6 +33,26 @@ function levelIndex(level: ProficiencyLevel): number {
   return PROFICIENCY_LEVELS.indexOf(level);
 }
 
+/**
+ * Lists store whatever the user typed as language ("es", "español",
+ * "inglés"...), mirroring the aliases the speech services accept. Campaigns
+ * declare bare codes, so both sides normalize to a code before comparing.
+ */
+const LANGUAGE_ALIASES: Record<string, string> = {
+  english: "en",
+  "inglés": "en",
+  ingles: "en",
+  spanish: "es",
+  "español": "es",
+  espanol: "es",
+  castellano: "es",
+};
+
+function normalizeLanguage(language: string): string {
+  const lang = language.toLowerCase().replace(/_/g, "-").trim();
+  return LANGUAGE_ALIASES[lang] ?? lang.split("-")[0];
+}
+
 /** Drop malformed campaigns/phrases instead of failing the whole registry. */
 function sanitizeRegistry(raw: unknown): AdRegistry | null {
   if (!raw || typeof raw !== "object" || !Array.isArray((raw as AdRegistry).campaigns)) {
@@ -78,15 +98,29 @@ function sanitizeRegistry(raw: unknown): AdRegistry | null {
   };
 }
 
+/** Dev-only visibility into why an ad did or didn't show. Silent in prod. */
+function debugLog(message: string, ...args: unknown[]) {
+  if (__DEV__) console.log(`[ads] ${message}`, ...args);
+}
+
 async function fetchRemoteRegistry(): Promise<AdRegistry | null> {
-  if (!REGISTRY_URL) return null;
+  if (!REGISTRY_URL) {
+    debugLog("EXPO_PUBLIC_ADS_REGISTRY_URL not set, skipping network");
+    return null;
+  }
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
     const response = await fetch(REGISTRY_URL, { signal: controller.signal });
-    if (!response.ok) return null;
-    return sanitizeRegistry(await response.json());
-  } catch {
+    if (!response.ok) {
+      debugLog(`registry fetch failed: HTTP ${response.status}`);
+      return null;
+    }
+    const registry = sanitizeRegistry(await response.json());
+    debugLog(registry ? "registry fetched from network" : "remote registry is malformed");
+    return registry;
+  } catch (error) {
+    debugLog("registry fetch threw (offline, CORS, or timeout):", error);
     return null;
   } finally {
     clearTimeout(timeout);
@@ -121,43 +155,66 @@ async function writeCache(registry: AdRegistry): Promise<void> {
  */
 export function createRegistryAdsService(): AdsService {
   async function loadRegistry(): Promise<AdRegistry | null> {
-    const cached = await readCache();
-    const fresh =
-      cached && Date.now() - new Date(cached.fetchedAt).getTime() < CACHE_TTL_MS;
-    if (cached && fresh) return cached.registry;
+    try {
+      const cached = await readCache();
+      const fresh =
+        cached && Date.now() - new Date(cached.fetchedAt).getTime() < CACHE_TTL_MS;
+      if (cached && fresh) {
+        debugLog("using fresh cached registry");
+        return cached.registry;
+      }
 
-    const remote = await fetchRemoteRegistry();
-    if (remote) {
-      await writeCache(remote);
-      return remote;
+      const remote = await fetchRemoteRegistry();
+      if (remote) {
+        await writeCache(remote);
+        return remote;
+      }
+
+      // Stale cache beats the bundled snapshot: it was published more recently
+      if (cached) {
+        debugLog("using stale cached registry");
+        return cached.registry;
+      }
+    } catch (error) {
+      // Whatever went wrong (storage, network edge case), ads must still work
+      debugLog("loadRegistry threw, falling back to bundled:", error);
     }
-
-    // Stale cache beats the bundled snapshot: it was published more recently
-    if (cached) return cached.registry;
+    debugLog("using bundled registry snapshot");
     return sanitizeRegistry(bundledRegistry);
   }
 
   return {
     async getSessionAd({ level, nativeLanguage, targetLanguage }) {
       const registry = await loadRegistry();
-      if (!registry) return null;
+      if (!registry) {
+        debugLog("no registry available from any source");
+        return null;
+      }
 
       const userLevel = levelIndex(level);
-      const pool: SessionAd[] = registry.campaigns
-        .filter(
-          (c) =>
-            c.active &&
-            c.nativeLanguage.toLowerCase() === nativeLanguage.toLowerCase() &&
-            c.targetLanguage.toLowerCase() === targetLanguage.toLowerCase()
-        )
-        .flatMap((c) =>
-          c.phrases
-            .filter((p) => levelIndex(p.level) <= userLevel)
-            .map((phrase) => ({ advertiser: c.advertiser, phrase }))
-        );
+      const matching = registry.campaigns.filter(
+        (c) =>
+          c.active &&
+          normalizeLanguage(c.nativeLanguage) === normalizeLanguage(nativeLanguage) &&
+          normalizeLanguage(c.targetLanguage) === normalizeLanguage(targetLanguage)
+      );
+      const pool: SessionAd[] = matching.flatMap((c) =>
+        c.phrases
+          .filter((p) => levelIndex(p.level) <= userLevel)
+          .map((phrase) => ({ advertiser: c.advertiser, phrase }))
+      );
 
-      if (pool.length === 0) return null;
-      return pool[Math.floor(Math.random() * pool.length)];
+      if (pool.length === 0) {
+        debugLog(
+          `no eligible ads: list is ${nativeLanguage}→${targetLanguage}, user level "${level}", ` +
+            `${registry.campaigns.length} campaign(s) in registry, ${matching.length} matching languages`
+        );
+        return null;
+      }
+
+      const picked = pool[Math.floor(Math.random() * pool.length)];
+      debugLog(`picked ad "${picked.phrase.id}" from ${pool.length} candidate(s)`);
+      return picked;
     },
   };
 }

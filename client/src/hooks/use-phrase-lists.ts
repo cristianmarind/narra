@@ -1,4 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { DEFAULT_LISTS } from "@/data/default-lists";
 import { useServices } from "@/services";
 import type {
   AcceptedTranslation,
@@ -8,6 +10,12 @@ import type {
   SpeechService,
 } from "@/types";
 import { generateId } from "@/utils";
+
+/**
+ * One-shot flag: the default lists are seeded only on the very first launch,
+ * so deleting them later doesn't bring them back.
+ */
+const SEEDED_KEY = "default_lists_seeded";
 
 /** Only the first phrase is ever persisted (see the lobby's warmup effect) */
 async function forgetPersistedListAudio(speech: SpeechService, list: PhraseList): Promise<void> {
@@ -28,6 +36,8 @@ interface PhraseListsContextValue {
   addPhrase: (listId: string, nativeSentence: string, acceptedTranslations: string[]) => Promise<void>;
   updatePhrase: (listId: string, phraseId: string, updates: Partial<Pick<Phrase, "nativeSentence" | "acceptedTranslations">>) => Promise<void>;
   deletePhrase: (listId: string, phraseId: string) => Promise<void>;
+  /** Persist a per-list practice preference (doesn't touch updatedAt) */
+  setListPreference: (listId: string, updates: Partial<Pick<PhraseList, "showTranslation">>) => Promise<void>;
   /** Add a user-submitted translation to a phrase (flagged as userAdded) */
   addUserTranslation: (listId: string, phraseId: string, translation: string) => Promise<void>;
   /** Increment correct/incorrect stats for a phrase */
@@ -56,8 +66,36 @@ export function PhraseListsProvider({ children }: { children: React.ReactNode })
   }, [storage]);
 
   useEffect(() => {
-    refresh();
-  }, [refresh]);
+    (async () => {
+      const seeded = await AsyncStorage.getItem(SEEDED_KEY);
+      if (!seeded) {
+        // Only seed a truly empty install — a user who already created lists
+        // before this feature shipped shouldn't get four surprise lists
+        const existing = await storage.getLists();
+        if (existing.length === 0) {
+          const now = new Date().toISOString();
+          for (const def of DEFAULT_LISTS) {
+            await storage.saveList({
+              id: generateId(),
+              name: def.name,
+              nativeLanguage: def.nativeLanguage,
+              targetLanguage: def.targetLanguage,
+              showTranslation: def.showTranslation,
+              phrases: def.phrases.map((p) => ({
+                id: generateId(),
+                nativeSentence: p.nativeSentence,
+                acceptedTranslations: p.acceptedTranslations,
+              })),
+              createdAt: now,
+              updatedAt: now,
+            });
+          }
+        }
+        await AsyncStorage.setItem(SEEDED_KEY, "1");
+      }
+      await refresh();
+    })();
+  }, [refresh, storage]);
 
   const createList = useCallback(
     async (name: string, nativeLanguage: string, targetLanguage: string) => {
@@ -142,6 +180,19 @@ export function PhraseListsProvider({ children }: { children: React.ReactNode })
     [storage, refresh]
   );
 
+  const setListPreference = useCallback(
+    async (listId: string, updates: Partial<Pick<PhraseList, "showTranslation">>) => {
+      const list = await storage.getListById(listId);
+      if (!list) return;
+
+      // `updatedAt` deliberately untouched: preferences aren't content edits
+      Object.assign(list, updates);
+      await storage.saveList(list);
+      await refresh();
+    },
+    [storage, refresh]
+  );
+
   const addUserTranslation = useCallback(
     async (listId: string, phraseId: string, translation: string) => {
       const list = await storage.getListById(listId);
@@ -207,6 +258,7 @@ export function PhraseListsProvider({ children }: { children: React.ReactNode })
     addPhrase,
     updatePhrase,
     deletePhrase,
+    setListPreference,
     addUserTranslation,
     recordPhraseResult,
   };

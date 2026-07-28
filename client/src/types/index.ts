@@ -40,6 +40,11 @@ export interface PhraseList {
    * edits to the list's content. Absent on lists never practiced.
    */
   lastPracticedAt?: string;
+  /**
+   * Show the correct translation during practice (learning mode for users
+   * starting from zero). Persisted per list.
+   */
+  showTranslation?: boolean;
 }
 
 // ===== Sponsored Ads =====

@@ -1,0 +1,165 @@
+{
+  "name": "Inglés básico - Nivel 1 (Sin conocimientos)",
+  "nativeLanguage": "español",
+  "targetLanguage": "inglés",
+  "showTranslation": true,
+  "phrases": [
+    {
+      "nativeSentence": "Yo",
+      "acceptedTranslations": [
+        "I"
+      ]
+    },
+    {
+      "nativeSentence": "Tú",
+      "acceptedTranslations": [
+        "You"
+      ]
+    },
+    {
+      "nativeSentence": "Él",
+      "acceptedTranslations": [
+        "He"
+      ]
+    },
+    {
+      "nativeSentence": "Ella",
+      "acceptedTranslations": [
+        "She"
+      ]
+    },
+    {
+      "nativeSentence": "Un",
+      "acceptedTranslations": [
+        "A"
+      ]
+    },
+    {
+      "nativeSentence": "Una",
+      "acceptedTranslations": [
+        "An"
+      ]
+    },
+    {
+      "nativeSentence": "El / La",
+      "acceptedTranslations": [
+        "The"
+      ]
+    },
+    {
+      "nativeSentence": "Soy / Estoy",
+      "acceptedTranslations": [
+        "I am",
+        "I'm"
+      ]
+    },
+    {
+      "nativeSentence": "Es / Está",
+      "acceptedTranslations": [
+        "Is",
+        "'s"
+      ]
+    },
+    {
+      "nativeSentence": "Doctor",
+      "acceptedTranslations": [
+        "Doctor"
+      ]
+    },
+    {
+      "nativeSentence": "Hotel",
+      "acceptedTranslations": [
+        "Hotel"
+      ]
+    },
+    {
+      "nativeSentence": "Hospital",
+      "acceptedTranslations": [
+        "Hospital"
+      ]
+    },
+    {
+      "nativeSentence": "Animal",
+      "acceptedTranslations": [
+        "Animal"
+      ]
+    },
+    {
+      "nativeSentence": "Chocolate",
+      "acceptedTranslations": [
+        "Chocolate"
+      ]
+    },
+    {
+      "nativeSentence": "Familia",
+      "acceptedTranslations": [
+        "Family"
+      ]
+    },
+    {
+      "nativeSentence": "Música",
+      "acceptedTranslations": [
+        "Music"
+      ]
+    },
+    {
+      "nativeSentence": "Un doctor",
+      "acceptedTranslations": [
+        "A doctor"
+      ]
+    },
+    {
+      "nativeSentence": "Un animal",
+      "acceptedTranslations": [
+        "An animal"
+      ]
+    },
+    {
+      "nativeSentence": "El hotel",
+      "acceptedTranslations": [
+        "The hotel"
+      ]
+    },
+    {
+      "nativeSentence": "El hospital",
+      "acceptedTranslations": [
+        "The hospital"
+      ]
+    },
+    {
+      "nativeSentence": "Soy un doctor.",
+      "acceptedTranslations": [
+        "I am a doctor.",
+        "I'm a doctor."
+      ]
+    },
+    {
+      "nativeSentence": "Ella es doctora.",
+      "acceptedTranslations": [
+        "She is a doctor.",
+        "She's a doctor."
+      ]
+    },
+    {
+      "nativeSentence": "Él está en el hospital.",
+      "acceptedTranslations": [
+        "He is at the hospital.",
+        "He's at the hospital."
+      ]
+    },
+    {
+      "nativeSentence": "Estoy en el hotel.",
+      "acceptedTranslations": [
+        "I am at the hotel.",
+        "I'm at the hotel."
+      ]
+    },
+    {
+      "nativeSentence": "Mi familia está en el hotel.",
+      "acceptedTranslations": [
+        "My family is at the hotel.",
+        "My family's at the hotel."
+      ]
+    }
+  ]
+}

@@ -23,7 +23,7 @@ const ACTIONS_WIDTH = 200;
 
 export default function ListDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { lists, deleteList } = usePhraseLists();
+  const { lists, deleteList, setListPreference } = usePhraseLists();
   const { speech } = useServices();
   const { isExpanded } = useBreakpoint();
   const colors = useTheme();
@@ -241,6 +241,29 @@ export default function ListDetailScreen() {
                   </View>
                   <Text style={[styles.voiceToggleText, { color: colors.textSecondary }]}>
                     Orden aleatorio
+                  </Text>
+                </Pressable>
+
+                {/* Persisted on the list itself, unlike the per-session toggles above */}
+                <Pressable
+                  onPress={() =>
+                    setListPreference(list.id, { showTranslation: !list.showTranslation })
+                  }
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: Boolean(list.showTranslation) }}
+                  style={({ pressed }) => [styles.voiceToggle, pressed && styles.pressed]}
+                >
+                  <View
+                    style={[
+                      styles.checkbox,
+                      { borderColor: Brand.accent },
+                      list.showTranslation && styles.checkboxActive,
+                    ]}
+                  >
+                    {list.showTranslation && <Text style={styles.checkmark}>✓</Text>}
+                  </View>
+                  <Text style={[styles.voiceToggleText, { color: colors.textSecondary }]}>
+                    Mostrar traducción correcta
                   </Text>
                 </Pressable>
 
