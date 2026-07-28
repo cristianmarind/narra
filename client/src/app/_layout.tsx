@@ -13,6 +13,7 @@ import { AppThemeProvider, useAppTheme } from "@/hooks/use-app-theme";
 import { useBreakpoint } from "@/hooks/use-breakpoint";
 import { PhraseListsProvider } from "@/hooks/use-phrase-lists";
 import { TtsSpeedProvider } from "@/hooks/use-tts-speed";
+import { UserLevelProvider } from "@/hooks/use-user-level";
 import { useTheme } from "@/hooks/use-theme";
 import { ServicesProvider } from "@/services";
 
@@ -115,11 +116,13 @@ export default function RootLayout() {
   return (
     <ServicesProvider>
       <TtsSpeedProvider>
-        <AppThemeProvider>
-          <PhraseListsProvider>
-            <RootLayoutInner />
-          </PhraseListsProvider>
-        </AppThemeProvider>
+        <UserLevelProvider>
+          <AppThemeProvider>
+            <PhraseListsProvider>
+              <RootLayoutInner />
+            </PhraseListsProvider>
+          </AppThemeProvider>
+        </UserLevelProvider>
       </TtsSpeedProvider>
     </ServicesProvider>
   );

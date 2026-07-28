@@ -6,8 +6,10 @@ import { Brand, Radius, Spacing } from "@/constants/theme";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useTheme } from "@/hooks/use-theme";
 import { useTtsSpeed } from "@/hooks/use-tts-speed";
+import { useUserLevel } from "@/hooks/use-user-level";
 import { useServices } from "@/services";
 import type { VoiceEngineStatus } from "@/types";
+import { PROFICIENCY_LABELS, PROFICIENCY_LEVELS } from "@/types";
 
 const SPEED_OPTIONS = [
   { label: "Muy lenta", value: 0.4 },
@@ -37,6 +39,7 @@ const STATUS_COLOR: Record<VoiceEngineStatus, string> = {
 export function SettingsPanel() {
   const { mode, setMode } = useAppTheme();
   const { speed, setSpeed } = useTtsSpeed();
+  const { level, setLevel } = useUserLevel();
   const { speech } = useServices();
   const colors = useTheme();
 
@@ -104,6 +107,28 @@ export function SettingsPanel() {
           style={[styles.hint, { color: colors.textMuted }]}
         >
           Al cambiar se regenera el audio cacheado
+        </ThemedText>
+      </View>
+
+      <View style={styles.section}>
+        <ThemedText type="small" themeColor="textSecondary">
+          Mi nivel
+        </ThemedText>
+        <View style={styles.optionsRow}>
+          {PROFICIENCY_LEVELS.map((value) => (
+            <OptionButton
+              key={value}
+              label={PROFICIENCY_LABELS[value]}
+              active={level === value}
+              onPress={() => setLevel(value)}
+            />
+          ))}
+        </View>
+        <ThemedText
+          type="small"
+          style={[styles.hint, { color: colors.textMuted }]}
+        >
+          Ajusta la dificultad de las frases patrocinadas
         </ThemedText>
       </View>
 

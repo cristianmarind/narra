@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { Linking, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ContentContainer } from "@/components/content-container";
@@ -23,8 +23,9 @@ import { usePracticeSession } from "@/hooks/use-practice-session";
 import { useSpeech } from "@/hooks/use-speech";
 import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
 import { useTheme } from "@/hooks/use-theme";
+import { useUserLevel } from "@/hooks/use-user-level";
 import { useServices } from "@/services";
-import type { Phrase, PhraseList, PhraseResult } from "@/types";
+import type { Phrase, PhraseList, PhraseResult, SessionAd } from "@/types";
 import { playBeep } from "@/utils";
 
 const TIMER_CORRECT_SECONDS = 3;
@@ -53,6 +54,33 @@ function reorderByIds(phrases: Phrase[], orderParam?: string): Phrase[] {
   return [...ordered, ...remaining];
 }
 
+/** WhatsApp contact for advertisers, opened from the CTA under the ad badge */
+const ADVERTISE_WHATSAPP_URL =
+  "https://wa.me/573016556270?text=" +
+  encodeURIComponent("Hola, quiero publicitar mi marca en Narra");
+
+/**
+ * Insert a sponsored phrase into the session queue. The ad plays like any
+ * other phrase but is excluded from scoring and persisted stats. Position is
+ * the ad's fixed `order` (1-based, clamped); absent, it plays second — late
+ * enough to not open the session, early enough to always be seen.
+ */
+function insertSessionAd(phrases: Phrase[], ad: SessionAd): Phrase[] {
+  const adPhrase: Phrase = {
+    id: `ad-${ad.phrase.id}`,
+    nativeSentence: ad.phrase.text,
+    acceptedTranslations: ad.phrase.acceptedTranslations,
+    sponsoredBy: ad.advertiser,
+  };
+  const index =
+    ad.phrase.order !== undefined
+      ? Math.min(Math.max(ad.phrase.order - 1, 0), phrases.length)
+      : Math.min(1, phrases.length);
+  const result = [...phrases];
+  result.splice(index, 0, adPhrase);
+  return result;
+}
+
 /**
  * Voice mode phases:
  * - "answer": listening for the user's translation
@@ -77,7 +105,8 @@ export default function PracticeScreen() {
   const voiceMode = voiceModeParam === "1";
 
   const { lists, addUserTranslation, recordPhraseResult } = usePhraseLists();
-  const { speech } = useServices();
+  const { speech, ads } = useServices();
+  const { level: userLevel } = useUserLevel();
   const colors = useTheme();
   const router = useRouter();
   const { speak, speakFixed, speaking } = useSpeech();
@@ -134,27 +163,41 @@ export default function PracticeScreen() {
     setList(found);
     if (found && found.phrases.length > 0 && status === "idle" && !started) {
       setStarted(true);
-      // `order` comes from the list screen's random toggle; absent, phrases
-      // play in their normal list order
-      const ordered = reorderByIds(found.phrases, orderParam);
-      setSessionPhrases(ordered);
-      start(found.id, ordered);
+      (async () => {
+        // `order` comes from the list screen's random toggle; absent, phrases
+        // play in their normal list order
+        const ordered = reorderByIds(found.phrases, orderParam);
 
-      // Whatever the detail screen (or a previous list) was still warming is
-      // stale now — drop it so this session's audio doesn't queue behind it
-      speech.cancelWarmups?.();
+        // One sponsored phrase per session; the service resolves fast (cache
+        // + fetch timeout) and to null on any failure, so it can't stall this
+        const ad = await ads
+          .getSessionAd({
+            level: userLevel,
+            nativeLanguage: found.nativeLanguage,
+            targetLanguage: found.targetLanguage,
+          })
+          .catch(() => null);
+        const sessionList = ad ? insertSessionAd(ordered, ad) : ordered;
 
-      // Fixed app messages: pinned (fixed speed, never purged). Idempotent —
-      // cheap to call again if already warm from the lobby.
-      speech.pregeneratePinned?.(fixedPromptsFor(found.targetLanguage), found.nativeLanguage);
+        setSessionPhrases(sessionList);
+        start(found.id, sessionList);
 
-      // Only warm the initial lookahead window, not the whole list — the
-      // sliding-window effect below keeps it topped up as the user advances
-      if (speech.pregenerate) {
-        const lookahead = ordered.slice(0, WINDOW_SIZE);
-        speech.pregenerate(lookahead.map((p) => p.acceptedTranslations[0]), found.targetLanguage);
-        speech.pregenerate(lookahead.map((p) => p.nativeSentence), found.nativeLanguage);
-      }
+        // Whatever the detail screen (or a previous list) was still warming is
+        // stale now — drop it so this session's audio doesn't queue behind it
+        speech.cancelWarmups?.();
+
+        // Fixed app messages: pinned (fixed speed, never purged). Idempotent —
+        // cheap to call again if already warm from the lobby.
+        speech.pregeneratePinned?.(fixedPromptsFor(found.targetLanguage), found.nativeLanguage);
+
+        // Only warm the initial lookahead window, not the whole list — the
+        // sliding-window effect below keeps it topped up as the user advances
+        if (speech.pregenerate) {
+          const lookahead = sessionList.slice(0, WINDOW_SIZE);
+          speech.pregenerate(lookahead.map((p) => p.acceptedTranslations[0]), found.targetLanguage);
+          speech.pregenerate(lookahead.map((p) => p.nativeSentence), found.nativeLanguage);
+        }
+      })();
     }
   }, [lists, id, status, start, started]);
 
@@ -327,8 +370,9 @@ export default function PracticeScreen() {
   // Navigate to results when completed
   useEffect(() => {
     if (status === "completed") {
+      // score excludes sponsored phrases, so the total must too
       router.replace(
-        `/list/${id}/results?correct=${score.correct}&incorrect=${score.incorrect}&total=${progress.total}&percentage=${score.percentage}`
+        `/list/${id}/results?correct=${score.correct}&incorrect=${score.incorrect}&total=${score.correct + score.incorrect}&percentage=${score.percentage}`
       );
     }
   }, [status]);
@@ -396,7 +440,10 @@ export default function PracticeScreen() {
     setAnswer("");
     clearTranscript();
     setVoicePhase(null);
-    recordPhraseResult(list.id, currentPhrase.id, result.isCorrect);
+    // Sponsored phrases don't belong to the list — nothing to persist
+    if (!currentPhrase.sponsoredBy) {
+      recordPhraseResult(list.id, currentPhrase.id, result.isCorrect);
+    }
 
     const prefix = result.isCorrect ? FEEDBACK_CORRECT : FEEDBACK_INCORRECT;
     const correctAnswer = currentPhrase.acceptedTranslations[0];
@@ -428,8 +475,10 @@ export default function PracticeScreen() {
 
   async function handleAddAsCorrect() {
     if (!lastResult || !currentPhrase || !list) return;
-    await addUserTranslation(list.id, currentPhrase.id, lastResult.userAnswer);
-    await recordPhraseResult(list.id, currentPhrase.id, true);
+    if (!currentPhrase.sponsoredBy) {
+      await addUserTranslation(list.id, currentPhrase.id, lastResult.userAnswer);
+      await recordPhraseResult(list.id, currentPhrase.id, true);
+    }
     overrideAsCorrect(currentPhrase.id);
     setLastResult({ ...lastResult, isCorrect: true, overridden: true });
     startTimer(TIMER_CORRECT_SECONDS);
@@ -500,6 +549,27 @@ export default function PracticeScreen() {
         {/* The phrase gets the vertical space; everything else hugs the edges */}
         <ContentContainer maxWidth={Layout.readingMaxWidth} style={styles.stage}>
           <View style={styles.phraseArea}>
+            {currentPhrase?.sponsoredBy && (
+              <View style={styles.sponsoredArea}>
+                <View style={styles.sponsoredBadge}>
+                  <Text style={styles.sponsoredText}>
+                    📢 PUBLICIDAD PÚBLICA PAGADA
+                  </Text>
+                  <Text style={styles.sponsoredAdvertiser}>
+                    {currentPhrase.sponsoredBy}
+                  </Text>
+                </View>
+                <Pressable
+                  onPress={() => Linking.openURL(ADVERTISE_WHATSAPP_URL)}
+                  accessibilityLabel="Contactar por WhatsApp para publicitar"
+                  style={({ pressed }) => pressed && styles.pressed}
+                >
+                  <Text style={[styles.advertiseCta, { color: colors.textMuted }]}>
+                    ¿Quieres anunciarte aquí? 💬 Escríbenos por WhatsApp
+                  </Text>
+                </Pressable>
+              </View>
+            )}
             <Text style={[styles.prompt, { color: colors.textMuted }]}>
               Traduce al {languageName(list.targetLanguage).toUpperCase()}:
             </Text>
@@ -620,6 +690,34 @@ const styles = StyleSheet.create({
   },
   prompt: {
     fontSize: 11,
+  },
+  sponsoredArea: {
+    alignItems: "center",
+    gap: Spacing.two,
+    marginBottom: Spacing.two,
+  },
+  sponsoredBadge: {
+    alignItems: "center",
+    gap: 2,
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.four,
+    borderRadius: Radius.pill,
+    backgroundColor: Brand.accent,
+  },
+  sponsoredText: {
+    color: Brand.onPrimary,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1,
+  },
+  sponsoredAdvertiser: {
+    color: Brand.onPrimary,
+    fontSize: 10,
+    opacity: 0.85,
+  },
+  advertiseCta: {
+    fontSize: 11,
+    textDecorationLine: "underline",
   },
   phrase: {
     // Readable rather than oversized: long sentences still fit without shrinking

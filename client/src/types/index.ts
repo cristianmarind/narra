@@ -19,6 +19,12 @@ export interface Phrase {
   userTranslations?: AcceptedTranslation[];
   /** Per-phrase accuracy stats */
   stats?: PhraseStats;
+  /**
+   * Advertiser name when this phrase is a sponsored ad injected into the
+   * session. Sponsored phrases are not part of the list and are excluded
+   * from scoring and persisted stats.
+   */
+  sponsoredBy?: string;
 }
 
 export interface PhraseList {
@@ -34,6 +40,58 @@ export interface PhraseList {
    * edits to the list's content. Absent on lists never practiced.
    */
   lastPracticedAt?: string;
+}
+
+// ===== Sponsored Ads =====
+
+/**
+ * User proficiency levels, from lowest to highest. Array order defines the
+ * comparison used to pick ads: a user only sees ads at or below their level.
+ */
+export const PROFICIENCY_LEVELS = ["none", "beginner", "intermediate", "advanced"] as const;
+
+export type ProficiencyLevel = (typeof PROFICIENCY_LEVELS)[number];
+
+export const PROFICIENCY_LABELS: Record<ProficiencyLevel, string> = {
+  none: "No sé nada del otro idioma",
+  beginner: "Principiante",
+  intermediate: "Intermedio",
+  advanced: "Avanzado",
+};
+
+/** A promotional phrase practiced like any other, provided by an advertiser. */
+export interface AdPhrase {
+  id: string;
+  /** Sentence in the list's native language, shown as the prompt */
+  text: string;
+  acceptedTranslations: string[];
+  level: ProficiencyLevel;
+  /**
+   * 1-based fixed position within the practice session. When absent the ad
+   * is inserted at a random position.
+   */
+  order?: number;
+}
+
+export interface AdCampaign {
+  id: string;
+  advertiser: string;
+  active: boolean;
+  nativeLanguage: string;
+  targetLanguage: string;
+  phrases: AdPhrase[];
+}
+
+/** Shape of the remote registry JSON consumed by the app. */
+export interface AdRegistry {
+  version: number;
+  updatedAt: string;
+  campaigns: AdCampaign[];
+}
+
+export interface SessionAd {
+  advertiser: string;
+  phrase: AdPhrase;
 }
 
 // ===== Practice Session =====
@@ -62,6 +120,19 @@ export interface StorageService {
   getListById(id: string): Promise<PhraseList | null>;
   saveList(list: PhraseList): Promise<void>;
   deleteList(id: string): Promise<void>;
+}
+
+export interface AdsService {
+  /**
+   * Pick one ad for a practice session, or null when none applies (no
+   * matching campaign, registry unreachable and no cache, etc). Never throws
+   * and never blocks the session for long — failures resolve to null.
+   */
+  getSessionAd(params: {
+    level: ProficiencyLevel;
+    nativeLanguage: string;
+    targetLanguage: string;
+  }): Promise<SessionAd | null>;
 }
 
 /** Load status of a neural voice, as shown in Settings. */

@@ -41,13 +41,16 @@ export function usePracticeSession(): UsePracticeSessionReturn {
 
   const score = useMemo(() => {
     if (!session) return { correct: 0, incorrect: 0, percentage: 0 };
-    const correct = session.results.filter((r) => r.isCorrect).length;
-    const incorrect = session.results.length - correct;
-    const percentage = session.results.length > 0
-      ? Math.round((correct / session.results.length) * 100)
+    // Sponsored phrases are practiced but never scored
+    const sponsoredIds = new Set(phrases.filter((p) => p.sponsoredBy).map((p) => p.id));
+    const counted = session.results.filter((r) => !sponsoredIds.has(r.phraseId));
+    const correct = counted.filter((r) => r.isCorrect).length;
+    const incorrect = counted.length - correct;
+    const percentage = counted.length > 0
+      ? Math.round((correct / counted.length) * 100)
       : 0;
     return { correct, incorrect, percentage };
-  }, [session]);
+  }, [session, phrases]);
 
   const start = useCallback((listId: string, sessionPhrases: Phrase[]) => {
     const newSession: PracticeSession = {
