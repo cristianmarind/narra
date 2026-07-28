@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useRef, useState } from "react";
 import type { StorageService, SpeechService, SpeechRecognitionService } from "@/types";
 import { createAsyncStorageService } from "./storage";
-import { createDefaultSpeechService } from "./create-speech";
-import { createExpoSpeechRecognitionService } from "./speech-recognition";
+import { createDefaultSpeechService } from "./speech";
+import { createExpoSpeechRecognitionService } from "./recognition";
 
 export interface Services {
   storage: StorageService;

@@ -1,8 +1,14 @@
-export { createAsyncStorageService } from "./storage";
-export { createExpoSpeechService } from "./speech";
-export { createExecuTorchSpeechService } from "./speech-executorch";
-export { createNeuralWebSpeechService } from "./speech-neural-web";
-export { createExpoSpeechRecognitionService } from "./speech-recognition";
-export { getSelectedVoiceName } from "./speech-web-fallback";
+/**./storage/async-storage
+ * Public surface of the services layer.
+ *./speech/executorch
+ * Screens and hooks should get services through `useServices()` rather than
+ * importing an implementation directly, so the plat./recognition/expo-recognition one
+ * place and tests can inject fakes vi./speech/web-fallbackverrides`.
+ */
+
 export { ServicesProvider, useServices } from "./provider";
 export type { Services } from "./provider";
+
+export * from "./speech";
+export * from "./recognition";
+export * from "./storage";

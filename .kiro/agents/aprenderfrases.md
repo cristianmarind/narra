@@ -68,28 +68,36 @@ El usuario traduce oraciones de su idioma nativo al idioma objetivo.
 
 ## Contexto operativo
 
-- El proyecto corre en Docker: `docker compose up` levanta Expo web en el puerto 8081.
-- Node **no** está instalado en el host de Windows. Cualquier comando de node, npm o tsc
-  debe ejecutarse dentro del contenedor con `docker compose exec -T client sh -c '...'`
-  (usar comillas simples por fuera; las dobles se rompen en este shell).
-- `tsc --noEmit` corre bien, pero su salida por stdout mata la sesión de
-  `docker compose exec`. La vuelta: redirigir a un archivo dentro de un volumen montado
-  y leerlo desde el host. `/app/src` mapea a `client/src`, así que:
+Node 24.18.0 está instalado en el host en `D:\programas\node` (portable, en el PATH de
+usuario). Trabajar en el host es el camino preferido: el watcher de Metro funciona nativo,
+así que hay hot reload real sin reiniciar nada.
 
-  ```
-  docker compose exec -T client sh -c './node_modules/.bin/tsc --noEmit > /app/src/tsc-out.txt 2>&1; echo "EXIT=$?" >> /app/src/tsc-out.txt'
-  ```
+- Desarrollo normal, desde `client/`: `npx expo start --web`
+- Typecheck: `node .\node_modules\typescript\lib\tsc.js --noEmit`
+  Redirigir a un archivo y leerlo, porque la salida larga por stdout rompe la sesión del
+  shell: `... --noEmit > ..\tsc.log 2>&1; "EXIT=$LASTEXITCODE" | Add-Content ..\tsc.log`.
+  Borrar el log al terminar.
+- `npm` y `npx` funcionan directo (la política de ejecución del usuario está en
+  `RemoteSigned`). No hace falta llamar a `npm.cmd`.
+- Al usar `Invoke-WebRequest`, poner `$ProgressPreference='SilentlyContinue'` primero; si
+  no, la barra de progreso satura el buffer de salida.
+- `npm ci` bloquea la terminal varios minutos sin devolver salida. Para saber si terminó,
+  usar `list_directory` sobre `client/node_modules/.bin` en vez de insistir con el shell.
 
-  Después leer `client/src/tsc-out.txt` y **borrarlo**, que si no queda en el árbol de
-  fuentes. Este es el chequeo de tipos real; hacerlo antes de dar un cambio por terminado.
-- Para verificar que un cambio compila y que los imports resuelven, pedir el bundle de Metro:
-  `http://localhost:8081/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=src%2Fapp&transform.reactCompiler=true`
-  Un 200 confirma que los imports resuelven y que todo transpila.
-- El file watcher de Metro **no** detecta cambios a través de los volúmenes de Docker en
-  Windows. Si el bundle vuelve idéntico en bytes o falta código nuevo, está sirviendo
-  caché: reiniciar con `docker compose restart client` y volver a verificar.
-- Al usar `Invoke-WebRequest` en PowerShell, poner `$ProgressPreference='SilentlyContinue'`
-  primero; si no, la barra de progreso satura el buffer de salida.
+Docker sigue disponible (`docker compose up`, puerto 8081) para paridad con producción,
+pero tiene dos trampas:
+
+- El watcher de Metro **no** ve cambios a través de los volúmenes montados en Windows. Si
+  el bundle vuelve idéntico en bytes o falta código nuevo, está sirviendo caché: reiniciar
+  con `docker compose restart client`.
+- Comandos dentro del contenedor: `docker compose exec -T client sh -c '...'`, con comillas
+  simples por fuera; las dobles se rompen en este shell.
+- El contenedor usa Node 20, el host 24. Si aparece algo que solo pasa en uno de los dos,
+  esa diferencia es el primer sospechoso.
+
+Para verificar que un cambio compila y que los imports resuelven, pedir el bundle de Metro:
+`http://localhost:8081/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=src%2Fapp&transform.reactCompiler=true`
+Un 200 confirma que resuelve y transpila, pero **no** chequea tipos: para eso, `tsc`.
 
 ## Convenciones
 

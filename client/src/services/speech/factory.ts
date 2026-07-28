@@ -7,8 +7,8 @@
  */
 import { Platform } from "react-native";
 import type { SpeechService } from "@/types";
-import { createExpoSpeechService } from "./speech";
-import { createNeuralWebSpeechService } from "./speech-neural-web";
+import { createExpoSpeechService } from "./expo-speech";
+import { createNeuralWebSpeechService } from "./neural-web";
 
 export function createDefaultSpeechService(getSpeed?: () => number): SpeechService {
   if (Platform.OS === "web" && typeof window !== "undefined" && typeof Worker !== "undefined") {
