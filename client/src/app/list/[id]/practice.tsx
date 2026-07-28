@@ -1,23 +1,28 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { ContentContainer } from "@/components/content-container";
+import { Kbd } from "@/components/kbd";
+import { ProgressBar } from "@/components/progress-bar";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { AnswerInput } from "@/components/practice/answer-input";
 import { PracticeFeedback } from "@/components/practice/practice-feedback";
-import { Brand, Spacing } from "@/constants/theme";
+import { Brand, Layout, Radius, Spacing } from "@/constants/theme";
 import {
   FEEDBACK_CORRECT,
   FEEDBACK_INCORRECT,
   buildIntro,
   fixedPromptsFor,
+  languageName,
 } from "@/constants/speech-prompts";
 import { usePhraseLists } from "@/hooks/use-phrase-lists";
 import { usePracticeSession } from "@/hooks/use-practice-session";
 import { useSpeech } from "@/hooks/use-speech";
 import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
+import { useTheme } from "@/hooks/use-theme";
 import { useServices } from "@/services";
 import type { PhraseList, PhraseResult } from "@/types";
 import { playBeep } from "@/utils";
@@ -48,6 +53,7 @@ export default function PracticeScreen() {
 
   const { lists, addUserTranslation, recordPhraseResult } = usePhraseLists();
   const { speech } = useServices();
+  const colors = useTheme();
   const router = useRouter();
   const { speak, speaking } = useSpeech();
   const {
@@ -302,6 +308,23 @@ export default function PracticeScreen() {
     return () => stopTimer();
   }, []);
 
+  // Enter advances to the next phrase, matching the hint shown next to the button.
+  // The answer field handles Enter itself via onSubmitEditing, so this only runs
+  // while feedback is on screen.
+  useEffect(() => {
+    if (Platform.OS !== "web" || !lastResult) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        handleNext();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [lastResult]);
+
   function handleCancelTimer() {
     stopTimer();
     setCountdown(-1);
@@ -371,107 +394,115 @@ export default function PracticeScreen() {
     }
   }
 
+  /** Leaves the session. Results already recorded are kept. */
+  function handleExit() {
+    stopTimer();
+    if (listening) stopListening();
+    router.replace(`/list/${id}`);
+  }
+
   if (!list || status === "idle") {
     return (
       <ThemedView style={styles.container}>
-        <ThemedText style={styles.center}>Cargando...</ThemedText>
+        <View style={styles.centered}>
+          <ThemedText themeColor="textSecondary">Cargando...</ThemedText>
+        </View>
       </ThemedView>
     );
   }
 
+  const percent = progress.total > 0 ? (progress.current / progress.total) * 100 : 0;
+
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safe}>
-        {/* Progress bar */}
-        <View style={styles.progressContainer}>
-          <View style={styles.progressBar}>
-            <View
-              style={[
-                styles.progressFill,
-                { width: `${(progress.current / progress.total) * 100}%` },
-              ]}
-            />
-          </View>
-          <ThemedText type="small" themeColor="textSecondary">
-            {progress.current} / {progress.total}
-          </ThemedText>
-        </View>
-
-        {/* Voice mode indicator */}
-        {voiceMode && (
-          <View style={styles.voiceIndicator}>
-            <ThemedText type="small" style={styles.voiceIndicatorText}>
-              🎙️ Modo voz
-              {voicePhase === "answer" && " · Escuchando respuesta..."}
-              {voicePhase === "pre-command" && ' · Di: "verify" o "repeat"'}
-              {voicePhase === "post-command" &&
-                ' · Di: "next", "repeat" o "stop"'}
-            </ThemedText>
-          </View>
-        )}
-
-        {/* Phrase display */}
-        <View style={styles.phraseSection}>
-          <ThemedText type="small" themeColor="textSecondary">
-            Traduce al {list.targetLanguage.toUpperCase()}:
-          </ThemedText>
-          <ThemedText type="title" style={styles.phraseText}>
-            {currentPhrase?.nativeSentence}
-          </ThemedText>
+        {/* Progress: position, percentage, and a way out */}
+        <View style={[styles.topBar, { borderBottomColor: colors.borderSubtle }]}>
+          <ProgressBar percent={percent} color={Brand.accent} height={5} style={styles.bar} />
+          <Text style={[styles.progressLabel, { color: colors.textSecondary }]}>
+            {progress.current} / {progress.total} · {Math.round(percent)}%
+          </Text>
           <Pressable
-            onPress={handleReplay}
-            disabled={speaking}
-            style={({ pressed }) => [
-              styles.speakButton,
-              pressed && styles.pressed,
-              speaking && styles.disabled,
-            ]}
+            onPress={handleExit}
+            accessibilityLabel="Salir de la práctica"
+            style={({ pressed }) => [styles.exit, pressed && styles.pressed]}
           >
-            <ThemedText style={styles.speakButtonText}>
-              {speaking ? "🔊 ..." : "🔊 Escuchar"}
-            </ThemedText>
+            <Text style={[styles.exitIcon, { color: colors.textMuted }]}>✕</Text>
           </Pressable>
         </View>
 
-        {/* Feedback */}
-        {lastResult && currentPhrase && (
-          <PracticeFeedback
-            result={lastResult}
-            phrase={currentPhrase}
-            countdown={countdown}
-            onCancelTimer={handleCancelTimer}
-            onAddAsCorrect={handleAddAsCorrect}
-            onReplayAnswer={() => {
-              if (currentPhrase && list) {
-                speak(currentPhrase.acceptedTranslations[0], list.targetLanguage);
-              }
-            }}
-          />
+        {voiceMode && (
+          <View style={styles.voiceIndicator}>
+            <Text style={styles.voiceIndicatorText}>
+              🎙️ Modo voz
+              {voicePhase === "answer" && " · Escuchando respuesta..."}
+              {voicePhase === "pre-command" && ' · Di: "verify" o "repeat"'}
+              {voicePhase === "post-command" && ' · Di: "next", "repeat" o "stop"'}
+            </Text>
+          </View>
         )}
 
-        {/* Input / Next */}
-        <View style={styles.inputSection}>
-          {!lastResult ? (
-            <AnswerInput
-              value={answer}
-              onChangeText={setAnswer}
-              onSubmit={handleSubmit}
-              micAvailable={micAvailable}
-              listening={listening}
-              onMicPress={handleMicPress}
-            />
-          ) : (
+        {/* The phrase gets the vertical space; everything else hugs the edges */}
+        <ContentContainer maxWidth={Layout.readingMaxWidth} style={styles.stage}>
+          <View style={styles.phraseArea}>
+            <Text style={[styles.prompt, { color: colors.textMuted }]}>
+              Traduce al {languageName(list.targetLanguage).toUpperCase()}:
+            </Text>
+            <ThemedText style={styles.phrase}>{currentPhrase?.nativeSentence}</ThemedText>
+
             <Pressable
-              onPress={handleNext}
+              onPress={handleReplay}
+              disabled={speaking}
               style={({ pressed }) => [
-                styles.button,
+                styles.listen,
+                { backgroundColor: colors.surfaceMuted },
                 pressed && styles.pressed,
+                speaking && styles.disabled,
               ]}
             >
-              <ThemedText style={styles.buttonText}>Siguiente →</ThemedText>
+              <Text style={[styles.listenText, { color: Brand.accent }]}>
+                {speaking ? "🔊 ..." : "🔊 Escuchar"}
+              </Text>
             </Pressable>
-          )}
-        </View>
+          </View>
+
+          <View style={styles.footer}>
+            {lastResult && currentPhrase ? (
+              <>
+                <PracticeFeedback
+                  result={lastResult}
+                  phrase={currentPhrase}
+                  countdown={countdown}
+                  onCancelTimer={handleCancelTimer}
+                  onAddAsCorrect={handleAddAsCorrect}
+                  onReplayAnswer={() => {
+                    if (currentPhrase && list) {
+                      speak(currentPhrase.acceptedTranslations[0], list.targetLanguage);
+                    }
+                  }}
+                />
+                <View style={styles.nextRow}>
+                  <Pressable
+                    onPress={handleNext}
+                    style={({ pressed }) => [styles.nextButton, pressed && styles.pressed]}
+                  >
+                    <Text style={styles.nextButtonText}>Siguiente →</Text>
+                  </Pressable>
+                  <Kbd>Enter</Kbd>
+                </View>
+              </>
+            ) : (
+              <AnswerInput
+                value={answer}
+                onChangeText={setAnswer}
+                onSubmit={handleSubmit}
+                micAvailable={micAvailable}
+                listening={listening}
+                onMicPress={handleMicPress}
+              />
+            )}
+          </View>
+        </ContentContainer>
       </SafeAreaView>
     </ThemedView>
   );
@@ -483,71 +514,94 @@ const styles = StyleSheet.create({
   },
   safe: {
     flex: 1,
-    padding: Spacing.three,
-    gap: Spacing.three,
   },
-  center: {
+  centered: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  topBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.two,
+    paddingHorizontal: Spacing.four,
+    paddingVertical: Spacing.three,
+    borderBottomWidth: 1,
+  },
+  bar: {
+    flex: 1,
+  },
+  progressLabel: {
+    fontSize: 11,
+  },
+  exit: {
+    padding: Spacing.one,
+  },
+  exitIcon: {
+    fontSize: 16,
+    lineHeight: 18,
+  },
+  voiceIndicator: {
+    alignSelf: "center",
+    marginTop: Spacing.two,
+    paddingVertical: Spacing.one,
+    paddingHorizontal: Spacing.three,
+    borderRadius: Radius.pill,
+    backgroundColor: Brand.primary,
+  },
+  voiceIndicatorText: {
+    color: Brand.accentSoft,
+    fontSize: 11,
+    fontWeight: "600",
+  },
+  stage: {
+    paddingHorizontal: Spacing.four,
+  },
+  phraseArea: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: Spacing.two,
+  },
+  prompt: {
+    fontSize: 11,
+  },
+  phrase: {
+    // Readable rather than oversized: long sentences still fit without shrinking
+    fontSize: 22,
+    lineHeight: 30,
+    fontWeight: "600",
     textAlign: "center",
-    marginTop: Spacing.six,
   },
-  progressContainer: {
+  listen: {
+    marginTop: Spacing.two,
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    borderRadius: Radius.md,
+  },
+  listenText: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  footer: {
+    gap: Spacing.two,
+    paddingBottom: Spacing.four,
+  },
+  nextRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing.two,
   },
-  progressBar: {
+  nextButton: {
     flex: 1,
-    height: 6,
-    backgroundColor: "#E0E0E0",
-    borderRadius: 3,
-    overflow: "hidden",
-  },
-  progressFill: {
-    height: "100%",
-    backgroundColor: Brand.accent,
-    borderRadius: 3,
-  },
-  voiceIndicator: {
-    backgroundColor: Brand.primary,
-    paddingVertical: Spacing.one,
-    paddingHorizontal: Spacing.two,
-    borderRadius: Spacing.one,
-    alignSelf: "center",
-  },
-  voiceIndicatorText: {
-    color: Brand.accentSoft,
-    fontWeight: "600",
-  },
-  phraseSection: {
-    flex: 1,
-    justifyContent: "center",
+    paddingVertical: Spacing.three,
+    borderRadius: Radius.lg,
     alignItems: "center",
-    gap: Spacing.three,
+    backgroundColor: Brand.accent,
   },
-  phraseText: {
-    textAlign: "center",
-  },
-  speakButton: {
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-    borderRadius: Spacing.two,
-    backgroundColor: "#F0F0F3",
-  },
-  speakButtonText: {
+  nextButtonText: {
+    color: Brand.onPrimary,
     fontSize: 14,
-  },
-  inputSection: {
-    gap: Spacing.two,
-  },
-  button: {
-    padding: Spacing.three,
-    borderRadius: Spacing.two,
-    alignItems: "center",
-    backgroundColor: Brand.accent,
-  },
-  buttonText: {
-    color: "#fff",
-    fontSize: 16,
     fontWeight: "600",
   },
   pressed: {

@@ -1,7 +1,8 @@
-import { Pressable, StyleSheet, TextInput, View } from "react-native";
+import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
-import { ThemedText } from "@/components/themed-text";
-import { Brand, Spacing } from "@/constants/theme";
+import { Kbd } from "@/components/kbd";
+import { Brand, Radius, Spacing } from "@/constants/theme";
+import { useTheme } from "@/hooks/use-theme";
 
 interface AnswerInputProps {
   value: string;
@@ -13,7 +14,10 @@ interface AnswerInputProps {
 }
 
 /**
- * Text area input for the user's translation answer, with optional mic button.
+ * Where the user types their translation.
+ *
+ * Single line by design: answers are one sentence, and a tall textarea pushed the
+ * phrase off-center. The mic sits inside the field so the row stays compact.
  */
 export function AnswerInput({
   value,
@@ -23,52 +27,60 @@ export function AnswerInput({
   listening,
   onMicPress,
 }: AnswerInputProps) {
+  const colors = useTheme();
+  const canSubmit = value.trim().length > 0;
+
   return (
     <View style={styles.container}>
-      <View style={styles.inputRow}>
+      <View style={styles.field}>
         <TextInput
-          style={styles.input}
+          style={[
+            styles.input,
+            {
+              backgroundColor: colors.surface,
+              borderColor: listening ? Brand.error : colors.border,
+              color: colors.text,
+            },
+            micAvailable && styles.inputWithMic,
+          ]}
           placeholder="Escribe tu traducción..."
-          placeholderTextColor="#999"
+          placeholderTextColor={colors.textMuted}
           value={value}
           onChangeText={onChangeText}
           onSubmitEditing={onSubmit}
           returnKeyType="send"
-          multiline
-          textAlignVertical="top"
           autoFocus
         />
+
         {micAvailable && (
           <Pressable
             onPress={onMicPress}
-            style={({ pressed }) => [
-              styles.micButton,
-              listening && styles.micButtonActive,
-              pressed && styles.pressed,
-            ]}
+            accessibilityLabel={listening ? "Detener dictado" : "Dictar respuesta"}
+            style={({ pressed }) => [styles.mic, pressed && styles.pressed]}
           >
-            <ThemedText style={styles.micButtonText}>
-              {listening ? "⏹" : "🎤"}
-            </ThemedText>
+            <Text style={styles.micIcon}>{listening ? "⏹" : "🎤"}</Text>
           </Pressable>
         )}
       </View>
+
       {listening && (
-        <ThemedText type="small" style={styles.listeningHint}>
-          Escuchando...
-        </ThemedText>
+        <Text style={[styles.listeningHint, { color: Brand.error }]}>Escuchando...</Text>
       )}
-      <Pressable
-        onPress={onSubmit}
-        disabled={!value.trim()}
-        style={({ pressed }) => [
-          styles.button,
-          pressed && styles.pressed,
-          !value.trim() && styles.disabled,
-        ]}
-      >
-        <ThemedText style={styles.buttonText}>Verificar</ThemedText>
-      </Pressable>
+
+      <View style={styles.submitRow}>
+        <Pressable
+          onPress={onSubmit}
+          disabled={!canSubmit}
+          style={({ pressed }) => [
+            styles.button,
+            pressed && styles.pressed,
+            !canSubmit && styles.disabled,
+          ]}
+        >
+          <Text style={styles.buttonText}>Verificar</Text>
+        </Pressable>
+        <Kbd>Enter</Kbd>
+      </View>
     </View>
   );
 }
@@ -77,49 +89,48 @@ const styles = StyleSheet.create({
   container: {
     gap: Spacing.two,
   },
-  inputRow: {
-    flexDirection: "row",
-    gap: Spacing.two,
-    alignItems: "flex-start",
+  field: {
+    justifyContent: "center",
   },
   input: {
-    flex: 1,
     borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: Spacing.two,
-    padding: Spacing.three,
+    borderRadius: Radius.lg,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+    fontSize: 15,
+    minHeight: 42,
+  },
+  inputWithMic: {
+    // Room for the mic button overlaid on the right edge
+    paddingRight: 40,
+  },
+  mic: {
+    position: "absolute",
+    right: Spacing.two,
+    padding: Spacing.one,
+  },
+  micIcon: {
     fontSize: 16,
-    minHeight: 60,
-    maxHeight: 120,
-  },
-  micButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#F0F0F3",
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 6,
-  },
-  micButtonActive: {
-    backgroundColor: Brand.error,
-  },
-  micButtonText: {
-    fontSize: 20,
   },
   listeningHint: {
     textAlign: "center",
-    color: Brand.error,
+    fontSize: 12,
+  },
+  submitRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.two,
   },
   button: {
-    padding: Spacing.three,
-    borderRadius: Spacing.two,
+    flex: 1,
+    paddingVertical: Spacing.three,
+    borderRadius: Radius.lg,
     alignItems: "center",
     backgroundColor: Brand.accent,
   },
   buttonText: {
-    color: "#fff",
-    fontSize: 16,
+    color: Brand.onPrimary,
+    fontSize: 14,
     fontWeight: "600",
   },
   pressed: {

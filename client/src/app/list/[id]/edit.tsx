@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { FlatList, Pressable, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { BreadcrumbBar } from "@/components/breadcrumb-bar";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { PhraseCardView } from "@/components/phrase-card-view";
@@ -74,8 +75,15 @@ export default function EditListScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safe} edges={["bottom"]}>
+        <BreadcrumbBar
+          items={[
+            { label: "Mis listas", onPress: () => router.replace("/") },
+            { label: list.name, onPress: () => router.replace(`/list/${id}`) },
+            { label: "Editar frases" },
+          ]}
+        />
+
         <View style={styles.header}>
-          <ThemedText type="subtitle">{list.name}</ThemedText>
           <ThemedText type="small" themeColor="textSecondary">
             {list.phrases.length} frase{list.phrases.length !== 1 ? "s" : ""} · Toca para editar, mantén para eliminar
           </ThemedText>

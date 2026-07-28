@@ -168,6 +168,10 @@ export function PhraseListsProvider({ children }: { children: React.ReactNode })
         phrase.stats.incorrectCount++;
       }
 
+      // Recording a result is the signal that the list was practiced.
+      // `updatedAt` is deliberately left alone: it tracks content edits.
+      list.lastPracticedAt = new Date().toISOString();
+
       await storage.saveList(list);
       await refresh();
     },

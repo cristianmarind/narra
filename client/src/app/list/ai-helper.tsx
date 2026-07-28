@@ -1,3 +1,4 @@
+import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
   Alert,
@@ -11,6 +12,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Clipboard from "expo-clipboard";
 
+import { BreadcrumbBar } from "@/components/breadcrumb-bar";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Brand, Spacing } from "@/constants/theme";
@@ -41,6 +43,7 @@ Reglas:
 }
 
 export default function AiHelperScreen() {
+  const router = useRouter();
   const [topic, setTopic] = useState("");
   const [nativeLang, setNativeLang] = useState("español");
   const [targetLang, setTargetLang] = useState("inglés");
@@ -65,6 +68,14 @@ export default function AiHelperScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safe} edges={["bottom"]}>
+        <BreadcrumbBar
+          items={[
+            { label: "Mis listas", onPress: () => router.replace("/") },
+            { label: "Importar JSON", onPress: () => router.replace("/list/import") },
+            { label: "Generar con IA" },
+          ]}
+        />
+
         <ScrollView contentContainerStyle={styles.content}>
           {/* Instructions */}
           <View style={styles.section}>

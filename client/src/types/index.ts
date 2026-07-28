@@ -29,6 +29,11 @@ export interface PhraseList {
   phrases: Phrase[];
   createdAt: string;
   updatedAt: string;
+  /**
+   * When the list was last practiced. Distinct from `updatedAt`, which tracks
+   * edits to the list's content. Absent on lists never practiced.
+   */
+  lastPracticedAt?: string;
 }
 
 // ===== Practice Session =====

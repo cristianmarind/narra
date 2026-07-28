@@ -1,26 +1,32 @@
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import {
-  Alert,
-  Platform,
-  Pressable,
-  StyleSheet,
-  View,
-} from "react-native";
+import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { BreadcrumbBar } from "@/components/breadcrumb-bar";
+import { ContentContainer } from "@/components/content-container";
+import { LanguagePair } from "@/components/language-badge";
+import { ProgressBar } from "@/components/progress-bar";
+import { StatTile } from "@/components/stat-tile";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-import { Brand, Spacing } from "@/constants/theme";
+import { Brand, Layout, Radius, Spacing } from "@/constants/theme";
+import { useBreakpoint } from "@/hooks/use-breakpoint";
 import { usePhraseLists } from "@/hooks/use-phrase-lists";
+import { useTheme } from "@/hooks/use-theme";
 import { useServices } from "@/services";
 import type { PhraseList } from "@/types";
-import { confirm } from "@/utils";
+import { confirm, formatRelativeTime, getListStats } from "@/utils";
+
+/** Width of the actions column on wide layouts */
+const ACTIONS_WIDTH = 200;
 
 export default function ListDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { lists, deleteList } = usePhraseLists();
   const { speech } = useServices();
+  const { isExpanded } = useBreakpoint();
+  const colors = useTheme();
   const router = useRouter();
   const [list, setList] = useState<PhraseList | null>(null);
   const [voiceMode, setVoiceMode] = useState(false);
@@ -63,111 +69,131 @@ export default function ListDetailScreen() {
   if (!list) {
     return (
       <ThemedView style={styles.container}>
-        <ThemedText style={styles.center}>Cargando...</ThemedText>
+        <View style={styles.centered}>
+          <ThemedText themeColor="textSecondary">Cargando...</ThemedText>
+        </View>
       </ThemedView>
     );
   }
 
-  const totalCorrect = list.phrases.reduce(
-    (sum, p) => sum + (p.stats?.correctCount ?? 0),
-    0
-  );
-  const totalIncorrect = list.phrases.reduce(
-    (sum, p) => sum + (p.stats?.incorrectCount ?? 0),
-    0
-  );
-  const totalAttempts = totalCorrect + totalIncorrect;
-  const accuracy =
-    totalAttempts > 0 ? Math.round((totalCorrect / totalAttempts) * 100) : null;
+  const { correct, incorrect, accuracy } = getListStats(list);
+  const lastPracticed = formatRelativeTime(list.lastPracticedAt);
+  const phraseCount = list.phrases.length;
 
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safe} edges={["bottom"]}>
-        <View style={styles.content}>
-          {/* Summary */}
-          <View style={styles.summary}>
-            <ThemedText type="title">{list.name}</ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              {list.nativeLanguage.toUpperCase()} → {list.targetLanguage.toUpperCase()}
-            </ThemedText>
-            <ThemedText type="subtitle">
-              {list.phrases.length} frase{list.phrases.length !== 1 ? "s" : ""}
-            </ThemedText>
+        {/* Compact layouts have no breadcrumb, so the stack header carries the
+            list name instead of the generic "Lista" */}
+        <Stack.Screen options={{ title: list.name }} />
 
-            {accuracy !== null && (
-              <View style={styles.statsBlock}>
-                <ThemedText type="small" themeColor="textSecondary">
-                  Precisión general
-                </ThemedText>
-                <ThemedText type="title" style={styles.accuracyText}>
-                  {accuracy}%
-                </ThemedText>
-                <View style={styles.statsRow}>
-                  <ThemedText type="small" style={styles.statCorrect}>
-                    ✓ {totalCorrect}
-                  </ThemedText>
-                  <ThemedText type="small" style={styles.statIncorrect}>
-                    ✗ {totalIncorrect}
-                  </ThemedText>
+        <BreadcrumbBar
+          items={[
+            { label: "Mis listas", onPress: () => router.replace("/") },
+            { label: list.name },
+          ]}
+        />
+
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <ContentContainer maxWidth={Layout.contentMaxWidth}>
+            <View style={[styles.body, isExpanded && styles.bodyRow]}>
+              {/* Left: identity and progress. Name itself lives in the header /
+                  breadcrumb, so this starts straight at the meta row. */}
+              <View style={styles.info}>
+                <View style={styles.metaRow}>
+                  <LanguagePair native={list.nativeLanguage} target={list.targetLanguage} />
+                  <Text style={[styles.meta, { color: colors.textMuted }]}>
+                    · {phraseCount} {phraseCount === 1 ? "frase" : "frases"}
+                  </Text>
+                </View>
+
+                {accuracy !== null ? (
+                  <View style={styles.statsBlock}>
+                    <ProgressBar
+                      percent={accuracy}
+                      color={accuracy >= 70 ? Brand.success : Brand.accent}
+                      height={5}
+                    />
+                    <View style={styles.tiles}>
+                      <StatTile value={`${accuracy}%`} label="precisión" color={Brand.accent} />
+                      <StatTile value={correct} label="correctas" color={Brand.success} />
+                      <StatTile value={incorrect} label="incorrectas" color={Brand.error} />
+                    </View>
+                    {lastPracticed && (
+                      <Text style={[styles.meta, { color: colors.textMuted }]}>
+                        ⏱ Última práctica {lastPracticed}
+                      </Text>
+                    )}
+                  </View>
+                ) : (
+                  <View
+                    style={[styles.emptyStats, { backgroundColor: colors.surfaceMuted }]}
+                  >
+                    <Text style={[styles.meta, { color: colors.textSecondary }]}>
+                      {phraseCount === 0
+                        ? "Agrega frases para poder practicar."
+                        : "Todavía no has practicado esta lista."}
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Right: what you can do with it */}
+              <View style={[styles.actions, isExpanded && styles.actionsColumn]}>
+                <Pressable
+                  onPress={handlePractice}
+                  style={({ pressed }) => [
+                    styles.button,
+                    styles.primaryButton,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <Text style={styles.primaryButtonText}>▶  Practicar</Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => router.push(`/list/${id}/edit`)}
+                  style={({ pressed }) => [
+                    styles.button,
+                    styles.secondaryButton,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <Text style={styles.secondaryButtonText}>Editar frases</Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => setVoiceMode(!voiceMode)}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: voiceMode }}
+                  style={({ pressed }) => [styles.voiceToggle, pressed && styles.pressed]}
+                >
+                  <View
+                    style={[
+                      styles.checkbox,
+                      { borderColor: Brand.accent },
+                      voiceMode && styles.checkboxActive,
+                    ]}
+                  >
+                    {voiceMode && <Text style={styles.checkmark}>✓</Text>}
+                  </View>
+                  <Text style={[styles.voiceToggleText, { color: colors.textSecondary }]}>
+                    Modo voz (manos libres)
+                  </Text>
+                </Pressable>
+
+                <View style={[styles.dangerZone, { borderTopColor: colors.borderSubtle }]}>
+                  <Pressable
+                    onPress={handleDeleteList}
+                    style={({ pressed }) => [styles.deleteButton, pressed && styles.pressed]}
+                  >
+                    <Text style={styles.deleteButtonText}>Eliminar lista</Text>
+                  </Pressable>
                 </View>
               </View>
-            )}
-          </View>
-
-          {/* Actions */}
-          <View style={styles.actions}>
-            {/* Voice mode toggle */}
-            <Pressable
-              onPress={() => setVoiceMode(!voiceMode)}
-              style={({ pressed }) => [styles.voiceToggle, pressed && styles.pressed]}
-            >
-              <View style={[styles.checkbox, voiceMode && styles.checkboxActive]}>
-                {voiceMode && <ThemedText style={styles.checkmark}>✓</ThemedText>}
-              </View>
-              <ThemedText style={styles.voiceToggleText}>
-                Modo voz (manos libres)
-              </ThemedText>
-            </Pressable>
-
-            <Pressable
-              onPress={handlePractice}
-              style={({ pressed }) => [
-                styles.actionButton,
-                styles.primaryButton,
-                pressed && styles.pressed,
-              ]}
-            >
-              <ThemedText style={styles.primaryButtonText}>
-                Practicar
-              </ThemedText>
-            </Pressable>
-
-            <Pressable
-              onPress={() => router.push(`/list/${id}/edit`)}
-              style={({ pressed }) => [
-                styles.actionButton,
-                styles.secondaryButton,
-                pressed && styles.pressed,
-              ]}
-            >
-              <ThemedText style={styles.secondaryButtonText}>
-                Editar frases
-              </ThemedText>
-            </Pressable>
-
-            <Pressable
-              onPress={handleDeleteList}
-              style={({ pressed }) => [
-                styles.deleteButton,
-                pressed && styles.pressed,
-              ]}
-            >
-              <ThemedText style={styles.deleteButtonText}>
-                Eliminar lista
-              </ThemedText>
-            </Pressable>
-          </View>
-        </View>
+            </View>
+          </ContentContainer>
+        </ScrollView>
       </SafeAreaView>
     </ThemedView>
   );
@@ -180,72 +206,63 @@ const styles = StyleSheet.create({
   safe: {
     flex: 1,
   },
-  content: {
-    flex: 1,
-    padding: Spacing.four,
-    justifyContent: "space-between",
-  },
-  summary: {
+  centered: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    gap: Spacing.two,
   },
-  statsBlock: {
-    marginTop: Spacing.four,
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: Spacing.four,
+    paddingTop: Spacing.four,
+    paddingBottom: Spacing.six,
+  },
+  body: {
+    gap: Spacing.five,
+  },
+  bodyRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  info: {
+    flex: 1,
+    gap: Spacing.two,
+    // Lets long list names wrap instead of pushing the actions column away
+    minWidth: 0,
+  },
+  metaRow: {
+    flexDirection: "row",
     alignItems: "center",
+    flexWrap: "wrap",
     gap: Spacing.one,
   },
-  accuracyText: {
-    color: Brand.accent,
+  meta: {
+    fontSize: 11,
   },
-  statsRow: {
+  statsBlock: {
+    marginTop: Spacing.three,
+    gap: Spacing.two,
+  },
+  tiles: {
     flexDirection: "row",
-    gap: Spacing.four,
+    gap: Spacing.two,
   },
-  statCorrect: {
-    color: Brand.success,
-    fontWeight: "600",
-  },
-  statIncorrect: {
-    color: Brand.error,
-    fontWeight: "600",
+  emptyStats: {
+    marginTop: Spacing.three,
+    padding: Spacing.three,
+    borderRadius: Radius.lg,
   },
   actions: {
     gap: Spacing.two,
   },
-  voiceToggle: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.two,
-    paddingVertical: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    marginBottom: Spacing.two,
+  actionsColumn: {
+    width: ACTIONS_WIDTH,
+    flexShrink: 0,
   },
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 4,
-    borderWidth: 2,
-    borderColor: Brand.accent,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  checkboxActive: {
-    backgroundColor: Brand.accent,
-  },
-  checkmark: {
-    color: Brand.onPrimary,
-    fontSize: 14,
-    fontWeight: "bold",
-  },
-  voiceToggleText: {
-    fontSize: 15,
-    color: "#ccc",
-  },
-  actionButton: {
-    padding: Spacing.three,
-    borderRadius: Spacing.two,
+  button: {
+    paddingVertical: Spacing.three,
+    paddingHorizontal: Spacing.four,
+    borderRadius: Radius.lg,
     alignItems: "center",
   },
   primaryButton: {
@@ -253,7 +270,7 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     color: Brand.onPrimary,
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "600",
   },
   secondaryButton: {
@@ -262,22 +279,49 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     color: Brand.accent,
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "600",
   },
+  voiceToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.two,
+    paddingVertical: Spacing.two,
+  },
+  checkbox: {
+    width: 18,
+    height: 18,
+    borderRadius: Radius.sm,
+    borderWidth: 2,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  checkboxActive: {
+    backgroundColor: Brand.accent,
+  },
+  checkmark: {
+    color: Brand.onPrimary,
+    fontSize: 11,
+    fontWeight: "bold",
+  },
+  voiceToggleText: {
+    fontSize: 12,
+  },
+  dangerZone: {
+    marginTop: Spacing.two,
+    paddingTop: Spacing.two,
+    borderTopWidth: 1,
+  },
   deleteButton: {
-    padding: Spacing.two,
+    paddingVertical: Spacing.two,
     alignItems: "center",
   },
   deleteButtonText: {
-    color: "#DC3545",
-    fontSize: 14,
+    color: Brand.error,
+    fontSize: 12,
     fontWeight: "600",
   },
   pressed: {
     opacity: 0.7,
-  },
-  center: {
-    textAlign: "center",
   },
 });

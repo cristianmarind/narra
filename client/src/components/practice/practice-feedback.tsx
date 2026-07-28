@@ -1,7 +1,6 @@
-import { Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import { ThemedText } from "@/components/themed-text";
-import { Brand, Spacing } from "@/constants/theme";
+import { Feedback, Radius, Spacing } from "@/constants/theme";
 import type { Phrase, PhraseResult } from "@/types";
 
 interface PracticeFeedbackProps {
@@ -14,8 +13,10 @@ interface PracticeFeedbackProps {
 }
 
 /**
- * Feedback card shown after the user submits an answer.
- * Shows correct/incorrect status, expected answer, countdown timer, and override option.
+ * Result of the submitted answer.
+ *
+ * Compact on purpose: it appears below the phrase without pushing it out of view,
+ * and the auto-advance countdown doubles as the cancel control.
  */
 export function PracticeFeedback({
   result,
@@ -25,133 +26,127 @@ export function PracticeFeedback({
   onAddAsCorrect,
   onReplayAnswer,
 }: PracticeFeedbackProps) {
+  const tone = result.isCorrect ? Feedback.correct : Feedback.incorrect;
+
+  const title = result.isCorrect
+    ? result.overridden
+      ? "✓ Aceptada (agregada por ti)"
+      : "✓ Correcto"
+    : "✗ Incorrecto";
+
   return (
-    <View
-      style={[
-        styles.feedback,
-        result.isCorrect ? styles.feedbackCorrect : styles.feedbackIncorrect,
-      ]}
-    >
-      <View style={styles.feedbackHeader}>
-        <ThemedText style={styles.feedbackTitle}>
-          {result.isCorrect
-            ? result.overridden
-              ? "✓ Aceptada (agregada por ti)"
-              : "✓ Correcto"
-            : "✗ Incorrecto"}
-        </ThemedText>
+    <View style={[styles.card, { backgroundColor: tone.surface }]}>
+      <View style={styles.header}>
+        <View style={styles.headerText}>
+          <Text style={[styles.title, { color: tone.text }]}>{title}</Text>
 
-        {/* Countdown timer badge */}
-        {countdown !== null && countdown > 0 && (
-          <Pressable onPress={onCancelTimer} style={styles.timerBadge}>
-            <ThemedText style={styles.timerText}>{countdown}s ✕</ThemedText>
-          </Pressable>
-        )}
-        {countdown === -1 && (
-          <ThemedText type="small" style={styles.timerCancelled}>
-            pausado
-          </ThemedText>
-        )}
-      </View>
-
-      {/* Replay correct answer */}
-      <Pressable
-        onPress={onReplayAnswer}
-        style={({ pressed }) => [styles.replayButton, pressed && styles.pressed]}
-      >
-        <ThemedText style={styles.replayButtonText}>
-          🔊 Repetir respuesta
-        </ThemedText>
-      </Pressable>
-
-      {!result.isCorrect && (
-        <>
-          <ThemedText type="small" style={styles.feedbackDetail}>
-            Respuesta esperada: {phrase.acceptedTranslations[0]}
-          </ThemedText>
-          <ThemedText type="small" style={styles.feedbackDetail}>
-            Tu respuesta: "{result.userAnswer}"
-          </ThemedText>
           <Pressable
-            onPress={onAddAsCorrect}
+            onPress={onReplayAnswer}
+            style={({ pressed }) => pressed && styles.pressed}
+          >
+            <Text style={[styles.link, { color: tone.strong }]}>🔊 Repetir respuesta</Text>
+          </Pressable>
+        </View>
+
+        {/* Auto-advance countdown; tapping it cancels so you can linger */}
+        {countdown !== null && countdown > 0 && (
+          <Pressable
+            onPress={onCancelTimer}
+            accessibilityLabel="Cancelar avance automático"
             style={({ pressed }) => [
-              styles.overrideButton,
+              styles.badge,
+              { backgroundColor: `${tone.strong}26` },
               pressed && styles.pressed,
             ]}
           >
-            <ThemedText style={styles.overrideButtonText}>
-              ✚ Agregar como correcta
-            </ThemedText>
+            <Text style={[styles.badgeText, { color: tone.strong }]}>auto {countdown}s ✕</Text>
           </Pressable>
-        </>
+        )}
+        {countdown === -1 && (
+          <Text style={[styles.paused, { color: tone.text }]}>pausado</Text>
+        )}
+      </View>
+
+      {!result.isCorrect && (
+        <View style={styles.details}>
+          <Text style={[styles.detail, { color: tone.text }]}>
+            Esperada: {phrase.acceptedTranslations[0]}
+          </Text>
+          <Text style={[styles.detail, { color: tone.text }]}>
+            Tu respuesta: "{result.userAnswer}"
+          </Text>
+
+          <Pressable
+            onPress={onAddAsCorrect}
+            style={({ pressed }) => [
+              styles.override,
+              { borderColor: tone.strong },
+              pressed && styles.pressed,
+            ]}
+          >
+            <Text style={[styles.overrideText, { color: tone.text }]}>
+              ✚ Agregar como correcta
+            </Text>
+          </Pressable>
+        </View>
       )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  feedback: {
+  card: {
     padding: Spacing.three,
-    borderRadius: Spacing.two,
+    borderRadius: Radius.lg,
     gap: Spacing.two,
   },
-  feedbackCorrect: {
-    backgroundColor: "#D4EDDA",
-  },
-  feedbackIncorrect: {
-    backgroundColor: "#F8D7DA",
-  },
-  feedbackHeader: {
+  header: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: "flex-start",
+    gap: Spacing.two,
   },
-  feedbackTitle: {
-    fontWeight: "700",
-    fontSize: 16,
+  headerText: {
+    flex: 1,
+    gap: 2,
   },
-  feedbackDetail: {
-    color: "#555",
+  title: {
+    fontSize: 14,
+    fontWeight: "600",
   },
-  timerBadge: {
-    backgroundColor: "#00000020",
+  link: {
+    fontSize: 11,
+  },
+  badge: {
     paddingHorizontal: Spacing.two,
     paddingVertical: 2,
-    borderRadius: Spacing.one,
+    borderRadius: Radius.sm,
   },
-  timerText: {
-    fontSize: 13,
+  badgeText: {
+    fontSize: 10,
     fontWeight: "600",
-    color: "#333",
   },
-  timerCancelled: {
-    color: "#888",
+  paused: {
+    fontSize: 10,
     fontStyle: "italic",
   },
-  overrideButton: {
+  details: {
+    gap: Spacing.one,
+  },
+  detail: {
+    fontSize: 12,
+  },
+  override: {
     alignSelf: "flex-start",
-    paddingVertical: Spacing.one,
-    paddingHorizontal: Spacing.two,
-    borderRadius: Spacing.one,
-    borderWidth: 1,
-    borderColor: Brand.accent,
     marginTop: Spacing.one,
-  },
-  overrideButtonText: {
-    color: Brand.accent,
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  replayButton: {
-    alignSelf: "flex-start",
     paddingVertical: Spacing.one,
     paddingHorizontal: Spacing.two,
-    borderRadius: Spacing.one,
-    backgroundColor: "#00000010",
+    borderRadius: Radius.sm,
+    borderWidth: 1,
   },
-  replayButtonText: {
-    fontSize: 13,
-    color: "#333",
+  overrideText: {
+    fontSize: 11,
+    fontWeight: "600",
   },
   pressed: {
     opacity: 0.7,

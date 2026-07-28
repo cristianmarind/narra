@@ -2,6 +2,7 @@ import { useRouter } from "expo-router";
 import { Pressable, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { BreadcrumbBar } from "@/components/breadcrumb-bar";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Spacing } from "@/constants/theme";
@@ -12,10 +13,14 @@ export default function NewListScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safe} edges={["bottom"]}>
+        <BreadcrumbBar
+          items={[
+            { label: "Mis listas", onPress: () => router.replace("/") },
+            { label: "Nueva lista" },
+          ]}
+        />
+
         <View style={styles.content}>
-          <ThemedText type="title" style={styles.heading}>
-            Nueva lista
-          </ThemedText>
           <ThemedText type="small" themeColor="textSecondary" style={styles.subtitle}>
             Elige cómo quieres crear tu lista de frases
           </ThemedText>
@@ -71,9 +76,6 @@ const styles = StyleSheet.create({
     padding: Spacing.four,
     gap: Spacing.four,
     justifyContent: "center",
-  },
-  heading: {
-    textAlign: "center",
   },
   subtitle: {
     textAlign: "center",

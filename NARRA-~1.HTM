@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>narra — Propuestas de diseño web</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f5f5f7;
+      color: #1a1a1a;
+      padding: 2rem;
+    }
+
+    h1 {
+      font-size: 22px;
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+
+    .subtitle {
+      font-size: 13px;
+      color: #888;
+      margin-bottom: 2.5rem;
+    }
+
+    .section {
+      margin-bottom: 3rem;
+    }
+
+    .section-label {
+      font-size: 11px;
+      font-weight: 500;
+      color: #aaa;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+
+    .section-desc {
+      font-size: 13px;
+      color: #666;
+      margin-bottom: 14px;
+      line-height: 1.6;
+      max-width: 640px;
+    }
+
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .tag-issue {
+      font-size: 11px;
+      background: #FAECE7;
+      color: #993C1D;
+      border-radius: 4px;
+      padding: 3px 8px;
+    }
+
+    .tag-prop {
+      font-size: 11px;
+      background: #E1F5EE;
+      color: #0F6E56;
+      border-radius: 4px;
+      padding: 3px 8px;
+    }
+
+    .mockup-frame {
+      border: 1px solid #e0e0e0;
+      border-radius: 12px;
+      overflow: hidden;
+      background: white;
+    }
+
+    hr.divider {
+      border: none;
+      border-top: 1px solid #e8e8e8;
+      margin: 2.5rem 0;
+    }
+
+    /* ─── SIDEBAR ─── */
+    .sidebar {
+      width: 200px;
+      background: #1a1560;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar-logo {
+      padding: 16px 20px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .sidebar-logo-icon {
+      width: 24px;
+      height: 24px;
+      background: #6c5ce7;
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      color: white;
+    }
+
+    .sidebar-logo span {
+      color: white;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .sidebar-nav {
+      padding: 12px 8px;
+      flex: 1;
+    }
+
+    .sidebar-item {
+      padding: 7px 12px;
+      border-radius: 6px;
+      margin-bottom: 2px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .sidebar-item.active {
+      background: rgba(255,255,255,0.12);
+      color: rgba(255,255,255,0.95);
+    }
+
+    .sidebar-item.inactive {
+      color: rgba(255,255,255,0.45);
+    }
+
+    .sidebar-footer {
+      padding: 12px 8px;
+      border-top: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .sidebar-cta {
+      padding: 8px 12px;
+      background: rgba(108,92,231,0.4);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      font-size: 12px;
+      color: rgba(255,255,255,0.9);
+      font-weight: 500;
+    }
+
+    kbd {
+      background: #f5f5f5;
+      border: 1px solid #ddd;
+      border-radius: 3px;
+      padding: 1px 5px;
+      font-size: 10px;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>narra — Propuestas de diseño web</h1>
+  <p class="subtitle">Revisión de UI para adaptar la app de móvil a desktop</p>
+
+  <!-- ── PROBLEMAS ACTUALES ── -->
+  <div class="section">
+    <div class="section-label">Problemas actuales (mobile-first en desktop)</div>
+    <div class="tags">
+      <span class="tag-issue">Hamburger menu en desktop</span>
+      <span class="tag-issue">Sin max-width — contenido se estira a 1366px</span>
+      <span class="tag-issue">FAB (+) es patrón móvil</span>
+      <span class="tag-issue">Cards en columna única</span>
+      <span class="tag-issue">Botones full-width en desktop</span>
+      <span class="tag-issue">Espacio vertical desperdiciado en práctica</span>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- ── PROPUESTA 1: HOME ── -->
+  <div class="section">
+    <div class="section-label">Propuesta 1 · Pantalla principal</div>
+    <div class="section-title">Sidebar persistente + grid de tarjetas</div>
+    <div class="section-desc">
+      Reemplazar el hamburger por un sidebar fijo en desktop. Las listas se muestran
+      en grid de 2–3 columnas con información más rica (progreso, precisión, última práctica).
+      El botón "+" desaparece como FAB y pasa al sidebar como acción primaria.
+    </div>
+
+    <div class="mockup-frame">
+      <div style="display: flex; height: 340px;">
+
+        <!-- Sidebar -->
+        <div class="sidebar">
+          <div class="sidebar-logo">
+            <div class="sidebar-logo-icon">▶</div>
+            <span>narra</span>
+          </div>
+          <div class="sidebar-nav">
+            <div class="sidebar-item active">
+              ⊞ Mis listas
+            </div>
+            <div class="sidebar-item inactive">
+              ▥ Estadísticas
+            </div>
+            <div class="sidebar-item inactive">
+              ⚙ Configuración
+            </div>
+          </div>
+          <div class="sidebar-footer">
+            <div class="sidebar-cta">
+              + Nueva lista
+            </div>
+          </div>
+        </div>
+
+        <!-- Main content -->
+        <div style="flex: 1; background: white; display: flex; flex-direction: column; overflow: hidden;">
+          <!-- Top bar -->
+          <div style="padding: 14px 24px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+              <div style="font-size: 15px; font-weight: 500;">Mis listas</div>
+              <div style="font-size: 11px; color: #888; margin-top: 1px;">3 listas · última práctica hace 2h</div>
+            </div>
+            <div style="background: #f5f5f5; border-radius: 6px; padding: 5px 12px; font-size: 11px; color: #666;">
+              🔍 Buscar lista...
+            </div>
+          </div>
+
+          <!-- Grid -->
+          <div style="padding: 20px 24px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+
+            <!-- Card 1 -->
+            <div style="border: 1px solid #e8e8e8; border-radius: 10px; padding: 14px; cursor: pointer;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <div style="display: flex; gap: 4px; align-items: center;">
+                  <span style="font-size: 10px; background: #EEEDFE; color: #534AB7; border-radius: 4px; padding: 2px 6px; font-weight: 500;">ES</span>
+                  <span style="font-size: 10px; color: #bbb;">→</span>
+                  <span style="font-size: 10px; background: #E6F1FB; color: #185FA5; border-radius: 4px; padding: 2px 6px; font-weight: 500;">EN</span>
+                </div>
+                <span style="font-size: 10px; color: #aaa;">20 frases</span>
+              </div>
+              <div style="font-size: 12px; font-weight: 500; line-height: 1.4; margin-bottom: 10px; color: #1a1a1a;">
+                Entrevistas laborales de ingenieros
+              </div>
+              <div style="height: 4px; background: #f0f0f0; border-radius: 2px; margin-bottom: 6px;">
+                <div style="width: 31%; height: 100%; background: #534AB7; border-radius: 2px;"></div>
+              </div>
+              <div style="display: flex; justify-content: space-between;">
+                <span style="font-size: 10px; color: #888;">31% precisión</span>
+                <span style="font-size: 10px; color: #aaa;">hace 2h</span>
+              </div>
+            </div>
+
+            <!-- Card 2 -->
+            <div style="border: 1px solid #e8e8e8; border-radius: 10px; padding: 14px; cursor: pointer;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <div style="display: flex; gap: 4px; align-items: center;">
+                  <span style="font-size: 10px; background: #EEEDFE; color: #534AB7; border-radius: 4px; padding: 2px 6px; font-weight: 500;">ES</span>
+                  <span style="font-size: 10px; color: #bbb;">→</span>
+                  <span style="font-size: 10px; background: #E6F1FB; color: #185FA5; border-radius: 4px; padding: 2px 6px; font-weight: 500;">EN</span>
+                </div>
+                <span style="font-size: 10px; color: #aaa;">15 frases</span>
+              </div>
+              <div style="font-size: 12px; font-weight: 500; line-height: 1.4; margin-bottom: 10px; color: #1a1a1a;">
+                Conversaciones cotidianas
+              </div>
+              <div style="height: 4px; background: #f0f0f0; border-radius: 2px; margin-bottom: 6px;">
+                <div style="width: 72%; height: 100%; background: #1D9E75; border-radius: 2px;"></div>
+              </div>
+              <div style="display: flex; justify-content: space-between;">
+                <span style="font-size: 10px; color: #888;">72% precisión</span>
+                <span style="font-size: 10px; color: #aaa;">ayer</span>
+              </div>
+            </div>
+
+            <!-- Card nueva lista -->
+            <div style="border: 1px dashed #ccc; border-radius: 10px; padding: 14px; background: #fafafa; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;">
+              <div style="font-size: 20px; color: #ccc;">+</div>
+              <span style="font-size: 11px; color: #bbb;">Nueva lista</span>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tags">
+      <span class="tag-prop">Sidebar reemplaza el hamburger</span>
+      <span class="tag-prop">Grid 3 columnas</span>
+      <span class="tag-prop">Cards con barra de progreso</span>
+      <span class="tag-prop">Nueva lista en sidebar, no FAB</span>
+      <span class="tag-prop">Última práctica y precisión visibles</span>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- ── PROPUESTA 2: DETALLE ── -->
+  <div class="section">
+    <div class="section-label">Propuesta 2 · Detalle de lista</div>
+    <div class="section-title">Layout dos columnas + stats visuales</div>
+    <div class="section-desc">
+      Info de la lista a la izquierda, acciones a la derecha. Stats en mini-cards en lugar de
+      texto plano. Botones con ancho natural (no full-width). Breadcrumb para navegar de vuelta.
+    </div>
+
+    <div class="mockup-frame">
+      <div style="display: flex; height: 280px;">
+
+        <div class="sidebar">
+          <div class="sidebar-logo">
+            <div class="sidebar-logo-icon">▶</div>
+            <span>narra</span>
+          </div>
+        </div>
+
+        <div style="flex: 1; background: white; display: flex; flex-direction: column; overflow: hidden;">
+          <!-- Breadcrumb -->
+          <div style="padding: 10px 24px; border-bottom: 1px solid #f0f0f0; font-size: 11px; color: #888; display: flex; align-items: center; gap: 5px;">
+            <span style="cursor: pointer;">Mis listas</span>
+            <span>›</span>
+            <span style="color: #1a1a1a;">Entrevistas laborales</span>
+          </div>
+
+          <!-- Two-col body -->
+          <div style="display: flex; flex: 1; padding: 24px; gap: 32px; overflow: hidden;">
+
+            <!-- Left: info + stats -->
+            <div style="flex: 1;">
+              <div style="font-size: 16px; font-weight: 500; line-height: 1.3; margin-bottom: 4px;">
+                Entrevistas laborales de ingenieros de sistemas
+              </div>
+              <div style="font-size: 11px; color: #888; margin-bottom: 18px;">ESPAÑOL → INGLÉS · 20 frases</div>
+
+              <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px;">
+                <div style="background: #f7f7f7; border-radius: 8px; padding: 10px; text-align: center;">
+                  <div style="font-size: 20px; font-weight: 500; color: #534AB7;">31%</div>
+                  <div style="font-size: 10px; color: #888; margin-top: 2px;">precisión</div>
+                </div>
+                <div style="background: #f7f7f7; border-radius: 8px; padding: 10px; text-align: center;">
+                  <div style="font-size: 20px; font-weight: 500; color: #1D9E75;">4</div>
+                  <div style="font-size: 10px; color: #888; margin-top: 2px;">correctas</div>
+                </div>
+                <div style="background: #f7f7f7; border-radius: 8px; padding: 10px; text-align: center;">
+                  <div style="font-size: 20px; font-weight: 500; color: #D85A30;">9</div>
+                  <div style="font-size: 10px; color: #888; margin-top: 2px;">incorrectas</div>
+                </div>
+              </div>
+
+              <div style="font-size: 11px; color: #aaa;">⏱ Última práctica hace 2 horas</div>
+            </div>
+
+            <!-- Right: actions -->
+            <div style="width: 180px; display: flex; flex-direction: column; gap: 10px; padding-top: 30px;">
+              <button style="background: #534AB7; color: white; border: none; border-radius: 8px; padding: 10px 16px; font-size: 13px; font-weight: 500; cursor: pointer; width: 100%;">
+                ▶ Practicar
+              </button>
+              <button style="background: white; color: #534AB7; border: 1px solid #534AB7; border-radius: 8px; padding: 10px 16px; font-size: 13px; cursor: pointer; width: 100%;">
+                ✏ Editar frases
+              </button>
+              <label style="display: flex; align-items: center; gap: 6px; font-size: 11px; color: #555; cursor: pointer; padding-top: 2px;">
+                <input type="checkbox" style="accent-color: #534AB7;" />
+                Modo voz (manos libres)
+              </label>
+              <div style="padding-top: 8px; border-top: 1px solid #f0f0f0; margin-top: auto;">
+                <span style="font-size: 11px; color: #D85A30; cursor: pointer;">Eliminar lista</span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tags">
+      <span class="tag-prop">Breadcrumb de navegación</span>
+      <span class="tag-prop">Dos columnas: info + acciones</span>
+      <span class="tag-prop">Stats en mini-cards</span>
+      <span class="tag-prop">Botones con ancho natural</span>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- ── PROPUESTA 3: PRÁCTICA ── -->
+  <div class="section">
+    <div class="section-label">Propuesta 3 · Pantalla de práctica</div>
+    <div class="section-title">Contenido centrado + max-width + atajos de teclado</div>
+    <div class="section-desc">
+      Contenedor centrado de ~580px de ancho máximo. Barra de progreso con número y porcentaje.
+      Frase a tamaño legible (no gigante). Atajo de teclado Enter visible junto al botón verificar.
+      Botón X para salir sin perder el progreso.
+    </div>
+
+    <div class="mockup-frame">
+      <div style="display: flex; height: 300px;">
+
+        <div class="sidebar">
+          <div class="sidebar-logo">
+            <div class="sidebar-logo-icon">▶</div>
+            <span>narra</span>
+          </div>
+        </div>
+
+        <div style="flex: 1; background: white; display: flex; flex-direction: column; align-items: center; overflow: hidden;">
+          <!-- Progress bar -->
+          <div style="width: 100%; padding: 10px 24px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 10px;">
+            <div style="flex: 1; height: 5px; background: #f0f0f0; border-radius: 3px;">
+              <div style="width: 5%; height: 100%; background: #534AB7; border-radius: 3px;"></div>
+            </div>
+            <span style="font-size: 11px; color: #888; white-space: nowrap;">1 / 20 · 5%</span>
+            <span style="font-size: 16px; color: #ccc; cursor: pointer; line-height: 1;">✕</span>
+          </div>
+
+          <!-- Phrase -->
+          <div style="width: 100%; max-width: 580px; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 24px;">
+            <div style="font-size: 11px; color: #aaa; margin-bottom: 8px;">Traduce al INGLÉS:</div>
+            <div style="font-size: 22px; font-weight: 500; color: #1a1a1a; text-align: center; margin-bottom: 12px;">
+              Háblame un poco sobre ti.
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px; background: #f5f5f5; border-radius: 6px; padding: 5px 14px; cursor: pointer; font-size: 12px; color: #534AB7;">
+              🔊 Escuchar
+            </div>
+          </div>
+
+          <!-- Input + verify -->
+          <div style="width: 100%; max-width: 580px; padding: 0 24px 16px;">
+            <div style="position: relative; margin-bottom: 8px;">
+              <input
+                type="text"
+                placeholder="Escribe tu traducción..."
+                style="width: 100%; padding: 9px 38px 9px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; outline: none; font-family: inherit;"
+              />
+              <span style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 14px; color: #bbb; cursor: pointer;">🎤</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <button style="flex: 1; background: #534AB7; color: white; border: none; border-radius: 8px; padding: 9px; font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit;">
+                Verificar
+              </button>
+              <kbd>Enter</kbd>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Estado: correcto -->
+    <div style="margin-top: 16px; font-size: 12px; color: #666; margin-bottom: 6px; font-weight: 500;">Estado: verificado (correcto)</div>
+    <div class="mockup-frame">
+      <div style="display: flex; height: 220px;">
+        <div class="sidebar" style="opacity: 0.3;"></div>
+        <div style="flex: 1; background: white; display: flex; flex-direction: column; align-items: center; overflow: hidden;">
+          <div style="width: 100%; padding: 10px 24px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 10px;">
+            <div style="flex: 1; height: 5px; background: #f0f0f0; border-radius: 3px;">
+              <div style="width: 5%; height: 100%; background: #534AB7; border-radius: 3px;"></div>
+            </div>
+            <span style="font-size: 11px; color: #888; white-space: nowrap;">1 / 20 · 5%</span>
+          </div>
+          <div style="width: 100%; max-width: 580px; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 24px 12px;">
+            <div style="font-size: 11px; color: #aaa; margin-bottom: 6px;">Traduce al INGLÉS:</div>
+            <div style="font-size: 22px; font-weight: 500; color: #1a1a1a; text-align: center;">Háblame un poco sobre ti.</div>
+          </div>
+          <!-- Feedback + next -->
+          <div style="width: 100%; max-width: 580px; padding: 0 24px 16px;">
+            <div style="background: #E1F5EE; border-radius: 8px; padding: 10px 14px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <div style="font-size: 13px; font-weight: 500; color: #0F6E56;">✓ Correcto</div>
+                <div style="font-size: 11px; color: #1D9E75; margin-top: 2px; cursor: pointer;">🔊 Repetir respuesta</div>
+              </div>
+              <span style="font-size: 10px; color: #1D9E75; background: rgba(29,158,117,0.15); border-radius: 4px; padding: 2px 6px;">auto 2s ✕</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <button style="flex: 1; background: #534AB7; color: white; border: none; border-radius: 8px; padding: 9px; font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit;">
+                Siguiente →
+              </button>
+              <kbd>Enter</kbd>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tags" style="margin-top: 10px;">
+      <span class="tag-prop">Contenido max-width 580px centrado</span>
+      <span class="tag-prop">Progreso con número y porcentaje</span>
+      <span class="tag-prop">X para salir visible</span>
+      <span class="tag-prop">Atajo Enter visible</span>
+      <span class="tag-prop">Frase a tamaño legible</span>
+      <span class="tag-prop">Feedback compacto con auto-avance</span>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- ── RESUMEN ── -->
+  <div class="section">
+    <div class="section-label">Resumen de cambios recomendados</div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: 700px;">
+
+      <div style="background: #FAECE7; border-radius: 10px; padding: 16px;">
+        <div style="font-size: 12px; font-weight: 500; color: #993C1D; margin-bottom: 8px;">Problemas actuales</div>
+        <ul style="font-size: 12px; color: #7A3016; padding-left: 16px; line-height: 2;">
+          <li>Hamburger menu en desktop</li>
+          <li>Sin max-width en ninguna pantalla</li>
+          <li>FAB (+) flotante</li>
+          <li>Cards en columna única full-width</li>
+          <li>Botones full-width en detalle</li>
+          <li>Frase gigante en práctica</li>
+          <li>Sin breadcrumb / orientación</li>
+        </ul>
+      </div>
+
+      <div style="background: #E1F5EE; border-radius: 10px; padding: 16px;">
+        <div style="font-size: 12px; font-weight: 500; color: #0F6E56; margin-bottom: 8px;">Propuestas</div>
+        <ul style="font-size: 12px; color: #0A5040; padding-left: 16px; line-height: 2;">
+          <li>Sidebar persistente en ≥768px</li>
+          <li>max-width por pantalla (1100px / 700px)</li>
+          <li>"Nueva lista" en sidebar</li>
+          <li>Grid 2–3 columnas con progreso visible</li>
+          <li>Dos columnas en detalle</li>
+          <li>Contenedor centrado en práctica</li>
+          <li>Breadcrumb + atajo Enter visible</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+
+</body>
+</html>

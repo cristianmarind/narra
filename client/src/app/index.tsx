@@ -1,20 +1,27 @@
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
-import { FlatList, Pressable, StyleSheet, View } from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { BreadcrumbBar } from "@/components/breadcrumb-bar";
+import { ContentContainer } from "@/components/content-container";
+import { ListCard, NewListCard } from "@/components/list-card";
+import { NarraLogo } from "@/components/narra-logo";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-import { Brand, Spacing } from "@/constants/theme";
+import { Brand, Radius, Spacing } from "@/constants/theme";
 import { fixedPromptsFor } from "@/constants/speech-prompts";
-import { NarraLogo } from "@/components/narra-logo";
+import { useBreakpoint } from "@/hooks/use-breakpoint";
 import { usePhraseLists } from "@/hooks/use-phrase-lists";
+import { useTheme } from "@/hooks/use-theme";
 import { useServices } from "@/services";
-import type { PhraseList } from "@/types";
+import { formatRelativeTime } from "@/utils";
 
 export default function HomeScreen() {
   const { lists, loading } = usePhraseLists();
   const { speech } = useServices();
+  const { isCompact, gridColumns } = useBreakpoint();
+  const colors = useTheme();
   const router = useRouter();
 
   // TTS warmup state (non-blocking)
@@ -92,41 +99,37 @@ export default function HomeScreen() {
     }
   }, []);
 
-  function renderItem({ item }: { item: PhraseList }) {
-    return (
-      <Pressable
-        onPress={() => router.push(`/list/${item.id}`)}
-        style={({ pressed }) => [styles.card, pressed && styles.pressed]}
-      >
-        <ThemedView type="backgroundElement" style={styles.cardInner}>
-          <ThemedText type="subtitle">{item.name}</ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
-            {item.nativeLanguage.toUpperCase()} → {item.targetLanguage.toUpperCase()}
-          </ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
-            {item.phrases.length} frase{item.phrases.length !== 1 ? "s" : ""}
-          </ThemedText>
-        </ThemedView>
-      </Pressable>
-    );
-  }
+  /** Most recent practice across all lists, for the subtitle */
+  const lastActivity = useMemo(() => {
+    const stamps = lists
+      .map((l) => l.lastPracticedAt)
+      .filter((s): s is string => Boolean(s))
+      .sort();
+    return formatRelativeTime(stamps.at(-1));
+  }, [lists]);
 
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safe} edges={["bottom"]}>
         {/* Non-blocking warmup indicator */}
         {warmupStatus && (
-          <View style={styles.warmupBanner}>
-            <ThemedText type="small" style={styles.warmupText}>
+          <View style={[styles.warmupBanner, { backgroundColor: Brand.primary }]}>
+            <Text style={styles.warmupText} numberOfLines={1}>
               🔊 {warmupStatus}
-            </ThemedText>
+            </Text>
           </View>
         )}
 
+        {/* Lobby is the root, so its trail is a single crumb. Rendering the same
+            bar as the detail screen keeps the chrome identical between them. */}
+        {lists.length > 0 && <BreadcrumbBar items={[{ label: "Mis listas" }]} />}
+
         {loading ? (
-          <ThemedText style={styles.center}>Cargando...</ThemedText>
+          <View style={styles.centered}>
+            <ThemedText themeColor="textSecondary">Cargando...</ThemedText>
+          </View>
         ) : lists.length === 0 ? (
-          <View style={styles.empty}>
+          <View style={styles.centered}>
             <NarraLogo size={56} />
             <ThemedText type="subtitle" style={styles.center}>
               No tienes listas aún
@@ -134,22 +137,54 @@ export default function HomeScreen() {
             <ThemedText type="small" themeColor="textSecondary" style={styles.center}>
               Crea tu primera lista para empezar a practicar
             </ThemedText>
+            <Pressable
+              onPress={() => router.push("/list/new")}
+              style={({ pressed }) => [styles.emptyCta, pressed && styles.pressed]}
+            >
+              <Text style={styles.emptyCtaText}>+  Nueva lista</Text>
+            </Pressable>
           </View>
         ) : (
-          <FlatList
-            data={lists}
-            keyExtractor={(item) => item.id}
-            renderItem={renderItem}
-            contentContainerStyle={styles.listContent}
-          />
+          <ScrollView contentContainerStyle={styles.scrollContent}>
+            <ContentContainer>
+              {/* Title lives in the breadcrumb / header; only the meta line here
+                  so it isn't repeated twice on the same screen */}
+              <View style={styles.heading}>
+                <Text style={[styles.subtitle, { color: colors.textMuted }]}>
+                  {lists.length} {lists.length === 1 ? "lista" : "listas"}
+                  {lastActivity ? ` · última práctica ${lastActivity}` : ""}
+                </Text>
+              </View>
+
+              <View style={styles.grid}>
+                {lists.map((list) => (
+                  <View
+                    key={list.id}
+                    style={[styles.gridItem, { width: `${100 / gridColumns}%` }]}
+                  >
+                    <ListCard list={list} onPress={() => router.push(`/list/${list.id}`)} />
+                  </View>
+                ))}
+
+                {/* Inline create action, so "+" isn't only a floating button */}
+                <View style={[styles.gridItem, { width: `${100 / gridColumns}%` }]}>
+                  <NewListCard onPress={() => router.push("/list/new")} />
+                </View>
+              </View>
+            </ContentContainer>
+          </ScrollView>
         )}
 
-        <Pressable
-          onPress={() => router.push("/list/new")}
-          style={({ pressed }) => [styles.fab, pressed && styles.pressed]}
-        >
-          <ThemedText style={styles.fabText}>+</ThemedText>
-        </Pressable>
+        {/* The FAB is a touch affordance; on desktop the sidebar CTA covers it */}
+        {isCompact && lists.length > 0 && (
+          <Pressable
+            onPress={() => router.push("/list/new")}
+            accessibilityLabel="Nueva lista"
+            style={({ pressed }) => [styles.fab, pressed && styles.pressed]}
+          >
+            <Text style={styles.fabText}>+</Text>
+          </Pressable>
+        )}
       </SafeAreaView>
     </ThemedView>
   );
@@ -163,7 +198,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   warmupBanner: {
-    backgroundColor: Brand.primary,
     paddingVertical: Spacing.one,
     paddingHorizontal: Spacing.three,
     alignItems: "center",
@@ -172,23 +206,30 @@ const styles = StyleSheet.create({
     color: Brand.accentSoft,
     fontSize: 12,
   },
-  listContent: {
-    padding: Spacing.three,
-    gap: Spacing.two,
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: Spacing.four,
+    // Matches the list detail so the content starts at the same height
+    paddingTop: Spacing.four,
+    paddingBottom: Spacing.six,
   },
-  card: {
-    borderRadius: Spacing.two,
-    overflow: "hidden",
-  },
-  cardInner: {
-    padding: Spacing.three,
-    borderRadius: Spacing.two,
+  heading: {
     gap: Spacing.one,
+    marginBottom: Spacing.four,
   },
-  pressed: {
-    opacity: 0.7,
+  subtitle: {
+    fontSize: 11,
   },
-  empty: {
+  grid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    // Negative margin pairs with gridItem padding to create even gutters
+    marginHorizontal: -Spacing.one,
+  },
+  gridItem: {
+    padding: Spacing.one,
+  },
+  centered: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
@@ -197,6 +238,18 @@ const styles = StyleSheet.create({
   },
   center: {
     textAlign: "center",
+  },
+  emptyCta: {
+    marginTop: Spacing.two,
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.four,
+    borderRadius: Radius.lg,
+    backgroundColor: Brand.accent,
+  },
+  emptyCtaText: {
+    color: Brand.onPrimary,
+    fontSize: 14,
+    fontWeight: "600",
   },
   fab: {
     position: "absolute",
@@ -215,9 +268,12 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   fabText: {
-    color: "#fff",
+    color: Brand.onPrimary,
     fontSize: 28,
     fontWeight: "bold",
     marginTop: -2,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 });

@@ -11,7 +11,7 @@
  * Bar heights below include the round caps, which extend past the line ends.
  */
 
-import { StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { StyleProp, ViewStyle } from "react-native";
 
 import { Brand } from "@/constants/theme";
@@ -91,6 +91,13 @@ interface NarraLogoProps {
   markOnly?: boolean;
   /** Overrides the wordmark color, which defaults to the brand primary */
   color?: string;
+  /**
+   * Makes the whole logo tappable. Both the mark and the wordmark share one
+   * touch target, which is the usual "logo goes home" affordance.
+   */
+  onPress?: () => void;
+  /** Announced by screen readers when `onPress` is set */
+  accessibilityLabel?: string;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -100,14 +107,14 @@ export function NarraLogo({
   variant = "light",
   markOnly = false,
   color,
+  onPress,
+  accessibilityLabel = "Ir al inicio",
   style,
 }: NarraLogoProps) {
-  if (markOnly) {
-    return <NarraMark size={size} variant={variant} style={style} />;
-  }
-
-  return (
-    <View style={[styles.row, { gap: size * 0.25 }, style]}>
+  const content = markOnly ? (
+    <NarraMark size={size} variant={variant} />
+  ) : (
+    <>
       <NarraMark size={size} variant={variant} />
       <Text
         style={[
@@ -121,7 +128,24 @@ export function NarraLogo({
       >
         narra
       </Text>
-    </View>
+    </>
+  );
+
+  const layout = [styles.row, !markOnly && { gap: size * 0.25 }, style];
+
+  if (!onPress) {
+    return <View style={layout}>{content}</View>;
+  }
+
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="link"
+      accessibilityLabel={accessibilityLabel}
+      style={({ pressed }) => [layout, pressed && styles.pressed]}
+    >
+      {content}
+    </Pressable>
   );
 }
 
@@ -139,5 +163,8 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     // Keeps the baseline aligned with the mark instead of the text box
     includeFontPadding: false,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 });
