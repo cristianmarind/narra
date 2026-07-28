@@ -1,12 +1,46 @@
 # Narra
 
-App para aprenderse frases en otro idioma. Muestra una oración en tu idioma nativo, la lee
-en voz alta, y tú la traduces al idioma que estás aprendiendo — escribiendo o hablando.
-La respuesta se valida contra un conjunto de traducciones aceptadas y recibes feedback
-inmediato con la respuesta esperada.
+Aprende idiomas como realmente se aprenden: por frases completas, no por palabras
+sueltas. Narra aplica el **Enfoque Léxico** y el **Sentence Mining** — las técnicas
+detrás de los políglotas — en una dinámica simple y adictiva: escuchas una frase en tu
+idioma, la traduces hablando o escribiendo, y recibes feedback inmediato con voz de
+calidad neuronal.
 
-Funciona offline: las listas se guardan en el dispositivo y la síntesis de voz corre
-localmente en el navegador.
+- **100% gratis y sin cuenta**: sin suscripciones, sin anuncios invasivos, sin límites
+  de práctica.
+- **Voz de calidad real**: modelos neuronales de síntesis corriendo en tu dispositivo —
+  se oye como una persona, no como un robot.
+- **Funciona offline**: tus listas y el audio viven en tu dispositivo; practica en el
+  avión, el metro o donde no llegue la señal.
+- **Juégalo donde sea y con quien sea**: el modo manos libres lo convierte en un juego
+  por turnos — en el carro, en el salón de clase, caminando. La app lee la frase, alguien
+  la traduce en voz alta, y la app dice si acertó. Frase a frase, sin pantallas de por
+  medio.
+- **Tus frases, tu mundo**: crea listas de lo que a ti te sirve (una entrevista, un
+  viaje, tu serie favorita) o genera listas con IA en un clic.
+
+## ¿Qué problema soluciona?
+
+Millones de personas llevan **años** "aprendiendo" un idioma y siguen sin poder sostener
+una conversación. No es falta de esfuerzo — es que las apps tradicionales entrenan lo
+que no sirve:
+
+- **Memorizas palabras sueltas, pero hablas en frases.** Saber "apple" no te consigue
+  trabajo; saber decir "I have experience working with Scrum" sí. Narra entrena la
+  unidad real del habla: la frase completa, con oído y pronunciación desde el día uno.
+- **Las apps te enseñan a jugar, no a hablar.** Rachas, gemas y lecciones que premian
+  tocar la pantalla. En Narra la única mecánica es la que ocurre en la vida real:
+  escuchas, traduces, hablas.
+- **Lo que necesitas aprender no está en el curso.** Ningún curso genérico trae las
+  frases de *tu* entrevista, *tu* viaje o *tu* consulta médica. En Narra el contenido lo
+  defines tú — o lo genera la IA en segundos.
+- **Aprender bien es caro.** Tutores, suscripciones, cursos... Narra es 100% gratis y su
+  voz neuronal corre en tu dispositivo: calidad de tutor sin pagar un tutor.
+- **Practicar hablado da pena y requiere compañía.** Con el modo manos libres practicas
+  conversación en voz alta sin nadie juzgándote — o al revés: conviértelo en un juego
+  por turnos con tu familia en el carro.
+- **La conectividad no puede ser un requisito.** Donde más se necesita aprender inglés
+  es justo donde menos internet hay. Narra funciona offline por diseño, no por accidente.
 
 ## Arquitectura
 
