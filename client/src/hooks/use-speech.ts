@@ -4,6 +4,8 @@ import { useServices } from "@/services";
 interface UseSpeechReturn {
   speaking: boolean;
   speak: (text: string, language: string) => Promise<void>;
+  /** Speak a fixed app message (feedback, intro) at a constant speed, never the user's setting */
+  speakFixed: (text: string, language: string) => Promise<void>;
   stop: () => void;
 }
 
@@ -27,10 +29,26 @@ export function useSpeech(): UseSpeechReturn {
     [speech]
   );
 
+  const speakFixed = useCallback(
+    async (text: string, language: string) => {
+      setSpeaking(true);
+      try {
+        if (speech.speakPinned) {
+          await speech.speakPinned(text, language);
+        } else {
+          await speech.speak(text, language);
+        }
+      } finally {
+        setSpeaking(false);
+      }
+    },
+    [speech]
+  );
+
   const stop = useCallback(() => {
     speech.stop();
     setSpeaking(false);
   }, [speech]);
 
-  return { speaking, speak, stop };
+  return { speaking, speak, speakFixed, stop };
 }

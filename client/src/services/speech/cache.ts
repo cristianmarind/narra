@@ -18,8 +18,13 @@ export interface CachedAudio {
   sampleRate: number;
 }
 
+/** Reused across calls so each read/write doesn't pay connection setup cost. */
+let dbPromise: Promise<IDBDatabase> | null = null;
+
 function openDB(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
+  if (dbPromise) return dbPromise;
+
+  dbPromise = new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
     request.onupgradeneeded = () => {
       const db = request.result;
@@ -30,6 +35,13 @@ function openDB(): Promise<IDBDatabase> {
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
   });
+
+  // A failed connection shouldn't poison every future call
+  dbPromise.catch(() => {
+    dbPromise = null;
+  });
+
+  return dbPromise;
 }
 
 /** Coerce whatever IndexedDB returned into a CachedAudio, or null. */
@@ -89,31 +101,34 @@ export async function loadPersistedAudio(key: string): Promise<CachedAudio | nul
   }
 }
 
-export async function hasPersistedAudio(key: string): Promise<boolean> {
+/** All keys currently in the persisted store, for callers that need to filter before deleting. */
+export async function getAllPersistedKeys(): Promise<string[]> {
   try {
     const db = await openDB();
     const tx = db.transaction(STORE_NAME, "readonly");
-    const request = tx.objectStore(STORE_NAME).count(key);
+    const request = tx.objectStore(STORE_NAME).getAllKeys();
     return new Promise((resolve) => {
-      request.onsuccess = () => resolve(request.result > 0);
-      request.onerror = () => resolve(false);
+      request.onsuccess = () => resolve(request.result as string[]);
+      request.onerror = () => resolve([]);
     });
   } catch {
-    return false;
+    return [];
   }
 }
 
-/** Clear ALL persisted audio (used when speed changes) */
-export async function clearAllPersistedAudio(): Promise<void> {
+/** Delete specific entries (used for selective purges, e.g. a speed change or a deleted list) */
+export async function deletePersistedAudio(keys: string[]): Promise<void> {
+  if (keys.length === 0) return;
   try {
     const db = await openDB();
     const tx = db.transaction(STORE_NAME, "readwrite");
-    tx.objectStore(STORE_NAME).clear();
+    const store = tx.objectStore(STORE_NAME);
+    for (const key of keys) store.delete(key);
     await new Promise<void>((resolve, reject) => {
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error);
     });
   } catch (err) {
-    console.warn("[TTS Cache] Failed to clear:", err);
+    console.warn("[TTS Cache] Failed to delete:", err);
   }
 }

@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
@@ -6,6 +7,7 @@ import { useAppTheme } from "@/hooks/use-app-theme";
 import { useTheme } from "@/hooks/use-theme";
 import { useTtsSpeed } from "@/hooks/use-tts-speed";
 import { useServices } from "@/services";
+import type { VoiceEngineStatus } from "@/types";
 
 const SPEED_OPTIONS = [
   { label: "Muy lenta", value: 0.4 },
@@ -13,6 +15,20 @@ const SPEED_OPTIONS = [
   { label: "Normal", value: 0.85 },
   { label: "Rápida", value: 1.0 },
 ];
+
+const STATUS_LABEL: Record<VoiceEngineStatus, string> = {
+  idle: "Pendiente",
+  loading: "Cargando…",
+  ready: "Lista ✓",
+  failed: "Error ✗",
+};
+
+const STATUS_COLOR: Record<VoiceEngineStatus, string> = {
+  idle: Brand.accentSoft,
+  loading: Brand.accent,
+  ready: Brand.success,
+  failed: Brand.error,
+};
 
 /**
  * Theme and playback settings. Rendered inside a modal from the sidebar, so it
@@ -23,6 +39,22 @@ export function SettingsPanel() {
   const { speed, setSpeed } = useTtsSpeed();
   const { speech } = useServices();
   const colors = useTheme();
+
+  const [engineStatuses, setEngineStatuses] = useState<{
+    english: VoiceEngineStatus;
+    spanish: VoiceEngineStatus;
+  } | null>(null);
+
+  // Poll while the panel is open — it's only mounted then, and loading can
+  // start at any point in the session (Spanish loads lazily, on first use)
+  useEffect(() => {
+    if (!speech.getEngineStatuses) return;
+
+    const poll = () => setEngineStatuses(speech.getEngineStatuses!());
+    poll();
+    const interval = setInterval(poll, 500);
+    return () => clearInterval(interval);
+  }, [speech]);
 
   async function handleSpeedChange(newSpeed: number) {
     if (newSpeed === speed) return;
@@ -74,6 +106,27 @@ export function SettingsPanel() {
           Al cambiar se regenera el audio cacheado
         </ThemedText>
       </View>
+
+      {engineStatuses && (
+        <View style={styles.section}>
+          <ThemedText type="small" themeColor="textSecondary">
+            Voces
+          </ThemedText>
+          <VoiceStatusRow label="Voz en inglés" status={engineStatuses.english} />
+          <VoiceStatusRow label="Voz en español" status={engineStatuses.spanish} />
+        </View>
+      )}
+    </View>
+  );
+}
+
+function VoiceStatusRow({ label, status }: { label: string; status: VoiceEngineStatus }) {
+  return (
+    <View style={styles.voiceRow}>
+      <ThemedText type="small">{label}</ThemedText>
+      <ThemedText type="small" style={{ color: STATUS_COLOR[status], fontWeight: "600" }}>
+        {STATUS_LABEL[status]}
+      </ThemedText>
     </View>
   );
 }
@@ -147,6 +200,12 @@ const styles = StyleSheet.create({
   hint: {
     fontSize: 11,
     fontStyle: "italic",
+  },
+  voiceRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: Spacing.one,
   },
   pressed: {
     opacity: 0.7,

@@ -1,7 +1,23 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { useServices } from "@/services";
-import type { AcceptedTranslation, Phrase, PhraseList, PhraseStats } from "@/types";
+import type {
+  AcceptedTranslation,
+  Phrase,
+  PhraseList,
+  PhraseStats,
+  SpeechService,
+} from "@/types";
 import { generateId } from "@/utils";
+
+/** Only the first phrase is ever persisted (see the lobby's warmup effect) */
+async function forgetPersistedListAudio(speech: SpeechService, list: PhraseList): Promise<void> {
+  if (!speech.forgetPersisted || list.phrases.length === 0) return;
+  const first = list.phrases[0];
+  await Promise.all([
+    speech.forgetPersisted([first.acceptedTranslations[0]], list.targetLanguage),
+    speech.forgetPersisted([first.nativeSentence], list.nativeLanguage),
+  ]);
+}
 
 interface PhraseListsContextValue {
   lists: PhraseList[];
@@ -25,7 +41,7 @@ const PhraseListsContext = createContext<PhraseListsContextValue | null>(null);
  * Must wrap all screens that use usePhraseLists().
  */
 export function PhraseListsProvider({ children }: { children: React.ReactNode }) {
-  const { storage } = useServices();
+  const { storage, speech } = useServices();
   const [lists, setLists] = useState<PhraseList[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -64,10 +80,14 @@ export function PhraseListsProvider({ children }: { children: React.ReactNode })
 
   const deleteList = useCallback(
     async (id: string) => {
+      const list = lists.find((l) => l.id === id);
       await storage.deleteList(id);
       await refresh();
+      // Best-effort: a deleted list's cached audio is no longer reachable to
+      // clean up later, so it must happen now
+      if (list) await forgetPersistedListAudio(speech, list);
     },
-    [storage, refresh]
+    [storage, refresh, lists, speech]
   );
 
   const addPhrase = useCallback(

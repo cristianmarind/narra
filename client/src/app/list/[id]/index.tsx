@@ -1,5 +1,5 @@
-import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
 import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -15,8 +15,8 @@ import { useBreakpoint } from "@/hooks/use-breakpoint";
 import { usePhraseLists } from "@/hooks/use-phrase-lists";
 import { useTheme } from "@/hooks/use-theme";
 import { useServices } from "@/services";
-import type { PhraseList } from "@/types";
-import { confirm, formatRelativeTime, getListStats } from "@/utils";
+import type { Phrase, PhraseList } from "@/types";
+import { confirm, formatRelativeTime, getListStats, shuffle } from "@/utils";
 
 /** Width of the actions column on wide layouts */
 const ACTIONS_WIDTH = 200;
@@ -31,17 +31,31 @@ export default function ListDetailScreen() {
   const [list, setList] = useState<PhraseList | null>(null);
   const [voiceMode, setVoiceMode] = useState(false);
   const [randomOrder, setRandomOrder] = useState(false);
+  // Fixed the moment random mode is switched on, so the practice screen plays
+  // (and this screen preloads) the exact same order
+  const [shuffledOrder, setShuffledOrder] = useState<Phrase[] | null>(null);
 
   useEffect(() => {
     const found = lists.find((l) => l.id === id) ?? null;
     setList(found);
-
-    // Pre-generate first 5 phrase answers in background while user views the list
-    if (found && found.phrases.length > 0 && speech.pregenerate) {
-      const firstAnswers = found.phrases.slice(0, 5).map((p) => p.acceptedTranslations[0]);
-      speech.pregenerate(firstAnswers, found.targetLanguage);
-    }
   }, [lists, id]);
+
+  // Warm the first answers only while this screen is actually in front. Focus
+  // (not mount) matters twice here: entering list B must first abandon list A's
+  // still-running batch, and this must NOT re-fire while the practice screen is
+  // stacked on top refreshing `lists` after every answer.
+  useFocusEffect(
+    useCallback(() => {
+      const found = lists.find((l) => l.id === id) ?? null;
+      if (!found || found.phrases.length === 0) return;
+
+      speech.cancelWarmups?.();
+      if (speech.pregenerate) {
+        const firstAnswers = found.phrases.slice(0, 5).map((p) => p.acceptedTranslations[0]);
+        speech.pregenerate(firstAnswers, found.targetLanguage);
+      }
+    }, [lists, id, speech])
+  );
 
   function handleDeleteList() {
     if (!list) return;
@@ -55,6 +69,30 @@ export default function ListDetailScreen() {
     );
   }
 
+  /**
+   * Shuffling here (instead of on the practice screen) means we know exactly
+   * which phrase will play first, so we can preload it before the user even
+   * presses "Practicar".
+   */
+  function handleToggleRandom() {
+    const next = !randomOrder;
+    setRandomOrder(next);
+
+    if (!next || !list) {
+      setShuffledOrder(null);
+      return;
+    }
+
+    const order = shuffle(list.phrases);
+    setShuffledOrder(order);
+
+    const first = order[0];
+    if (first && speech.pregenerate) {
+      speech.pregenerate([first.acceptedTranslations[0]], list.targetLanguage);
+      speech.pregenerate([first.nativeSentence], list.nativeLanguage);
+    }
+  }
+
   function handlePractice() {
     if (!list || list.phrases.length === 0) {
       if (Platform.OS === "web") {
@@ -64,9 +102,10 @@ export default function ListDetailScreen() {
       }
       return;
     }
-    router.push(
-      `/list/${id}/practice?voiceMode=${voiceMode ? "1" : "0"}&random=${randomOrder ? "1" : "0"}`
-    );
+
+    const order =
+      randomOrder && shuffledOrder ? `&order=${shuffledOrder.map((p) => p.id).join(",")}` : "";
+    router.push(`/list/${id}/practice?voiceMode=${voiceMode ? "1" : "0"}${order}`);
   }
 
   if (!list) {
@@ -186,7 +225,7 @@ export default function ListDetailScreen() {
                 </Pressable>
 
                 <Pressable
-                  onPress={() => setRandomOrder(!randomOrder)}
+                  onPress={handleToggleRandom}
                   accessibilityRole="checkbox"
                   accessibilityState={{ checked: randomOrder }}
                   style={({ pressed }) => [styles.voiceToggle, pressed && styles.pressed]}

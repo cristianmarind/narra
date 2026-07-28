@@ -33,7 +33,9 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
           </View>
 
           <View style={styles.body}>
-            <SettingsPanel />
+            {/* Mounted only while visible, so the voice-status poll inside it
+                doesn't run for the whole app session */}
+            {visible && <SettingsPanel />}
           </View>
         </Pressable>
       </Pressable>

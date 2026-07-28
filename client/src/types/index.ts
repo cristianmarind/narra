@@ -64,20 +64,45 @@ export interface StorageService {
   deleteList(id: string): Promise<void>;
 }
 
+/** Load status of a neural voice, as shown in Settings. */
+export type VoiceEngineStatus = "idle" | "loading" | "ready" | "failed";
+
 export interface SpeechService {
   speak(text: string, language: string): Promise<void>;
   stop(): void;
   isSpeaking(): Promise<boolean>;
+  /**
+   * Speak a fixed app message (feedback, intro) at a constant reference speed,
+   * independent of the user's chosen playback speed. Falls back to speak()
+   * when not supported. Optional.
+   */
+  speakPinned?(text: string, language: string): Promise<void>;
   /** Pre-generate audio for a list of texts in background. Optional — noop if not supported. */
   pregenerate?(texts: string[], language: string): void;
   /** Pre-generate and persist first phrases permanently. Optional. */
   pregeneratePersistent?(texts: string[], language: string, onProgress?: (current: number, total: number, text: string, status: "checking" | "generating" | "cached") => void): Promise<void>;
+  /**
+   * Pre-generate and permanently pin fixed app messages (feedback, intro) at the
+   * constant reference speed. Immune to clearSessionCache/clearAllCache. Optional.
+   */
+  pregeneratePinned?(texts: string[], language: string): Promise<void>;
+  /**
+   * Abandon queued session warmups (pregenerate batches not yet generated), so
+   * a previous screen's batch doesn't delay the current screen's audio. Optional.
+   */
+  cancelWarmups?(): void;
+  /** Evict specific texts from the in-memory session cache. No-op for pinned/persisted entries. Optional. */
+  forget?(texts: string[], language: string): void;
+  /** Remove specific texts from persisted storage too (e.g. a deleted list). Optional. */
+  forgetPersisted?(texts: string[], language: string): Promise<void>;
   /** Clear session (non-persistent) audio cache. Optional. */
   clearSessionCache?(): void;
-  /** Clear ALL cache (memory + IndexedDB). Used when settings change. Optional. */
+  /** Clear cache affected by a speed change (memory + IndexedDB). Optional. */
   clearAllCache?(): Promise<void>;
-  /** Check if model is ready. Optional. */
+  /** Check if at least one neural voice finished loading. Optional. */
   isModelReady?(): boolean;
+  /** Per-voice load status, for display in Settings. Optional. */
+  getEngineStatuses?(): { english: VoiceEngineStatus; spanish: VoiceEngineStatus };
 }
 
 export interface SpeechRecognitionService {

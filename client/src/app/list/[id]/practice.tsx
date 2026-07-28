@@ -24,11 +24,34 @@ import { useSpeech } from "@/hooks/use-speech";
 import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
 import { useTheme } from "@/hooks/use-theme";
 import { useServices } from "@/services";
-import type { PhraseList, PhraseResult } from "@/types";
-import { playBeep, shuffle } from "@/utils";
+import type { Phrase, PhraseList, PhraseResult } from "@/types";
+import { playBeep } from "@/utils";
 
 const TIMER_CORRECT_SECONDS = 3;
 const TIMER_INCORRECT_SECONDS = 15;
+
+/** Max phrases warmed ahead of the current one, per language, at any time */
+const WINDOW_SIZE = 5;
+
+/**
+ * Reorder phrases to match an explicit id sequence (from the list-detail
+ * screen's shuffle, so the exact phrase warmed there ends up first here).
+ * Ids no longer present are dropped; phrases not in the sequence (e.g. added
+ * after the order was computed) are appended at the end, order preserved.
+ */
+function reorderByIds(phrases: Phrase[], orderParam?: string): Phrase[] {
+  if (!orderParam) return phrases;
+
+  const byId = new Map(phrases.map((p) => [p.id, p]));
+  const ordered = orderParam
+    .split(",")
+    .map((id) => byId.get(id))
+    .filter((p): p is Phrase => Boolean(p));
+
+  const orderedIds = new Set(ordered.map((p) => p.id));
+  const remaining = phrases.filter((p) => !orderedIds.has(p.id));
+  return [...ordered, ...remaining];
+}
 
 /**
  * Voice mode phases:
@@ -45,19 +68,19 @@ const TIMER_INCORRECT_SECONDS = 15;
 type VoicePhase = "answer" | "pre-command" | "post-command" | null;
 
 export default function PracticeScreen() {
-  const { id, voiceMode: voiceModeParam, random: randomParam } = useLocalSearchParams<{
+  const { id, voiceMode: voiceModeParam, order: orderParam } = useLocalSearchParams<{
     id: string;
     voiceMode?: string;
-    random?: string;
+    /** Comma-separated phrase ids, fixing the exact play order (set by the list screen's random toggle) */
+    order?: string;
   }>();
   const voiceMode = voiceModeParam === "1";
-  const randomOrder = randomParam === "1";
 
   const { lists, addUserTranslation, recordPhraseResult } = usePhraseLists();
   const { speech } = useServices();
   const colors = useTheme();
   const router = useRouter();
-  const { speak, speaking } = useSpeech();
+  const { speak, speakFixed, speaking } = useSpeech();
   const {
     listening,
     transcript,
@@ -81,6 +104,9 @@ export default function PracticeScreen() {
   const [lastResult, setLastResult] = useState<PhraseResult | null>(null);
   const [list, setList] = useState<PhraseList | null>(null);
   const [started, setStarted] = useState(false);
+  // Mirrors exactly what was passed to start(), so the lookahead window can
+  // look up phrases by session position instead of list order
+  const [sessionPhrases, setSessionPhrases] = useState<Phrase[]>([]);
 
   // Timer state
   const [countdown, setCountdown] = useState<number | null>(null);
@@ -108,26 +134,53 @@ export default function PracticeScreen() {
     setList(found);
     if (found && found.phrases.length > 0 && status === "idle" && !started) {
       setStarted(true);
-      start(found.id, randomOrder ? shuffle(found.phrases) : found.phrases);
+      // `order` comes from the list screen's random toggle; absent, phrases
+      // play in their normal list order
+      const ordered = reorderByIds(found.phrases, orderParam);
+      setSessionPhrases(ordered);
+      start(found.id, ordered);
 
-      // Pre-generate TTS audio in the background so rounds don't wait on it
+      // Whatever the detail screen (or a previous list) was still warming is
+      // stale now — drop it so this session's audio doesn't queue behind it
+      speech.cancelWarmups?.();
+
+      // Fixed app messages: pinned (fixed speed, never purged). Idempotent —
+      // cheap to call again if already warm from the lobby.
+      speech.pregeneratePinned?.(fixedPromptsFor(found.targetLanguage), found.nativeLanguage);
+
+      // Only warm the initial lookahead window, not the whole list — the
+      // sliding-window effect below keeps it topped up as the user advances
       if (speech.pregenerate) {
-        // Target language: the expected answers, read during feedback
-        speech.pregenerate(
-          found.phrases.map((p) => p.acceptedTranslations[0]),
-          found.targetLanguage
-        );
-        // Native language: the fixed app phrases plus every prompt sentence
-        speech.pregenerate(
-          [
-            ...fixedPromptsFor(found.targetLanguage),
-            ...found.phrases.map((p) => p.nativeSentence),
-          ],
-          found.nativeLanguage
-        );
+        const lookahead = ordered.slice(0, WINDOW_SIZE);
+        speech.pregenerate(lookahead.map((p) => p.acceptedTranslations[0]), found.targetLanguage);
+        speech.pregenerate(lookahead.map((p) => p.nativeSentence), found.nativeLanguage);
       }
     }
   }, [lists, id, status, start, started]);
+
+  // Sliding lookahead window: keeps at most WINDOW_SIZE phrases warmed ahead
+  // of the current one, per language. Advancing evicts the phrase that fell
+  // behind (unless it's pinned/persisted) and warms the one that just entered
+  // the tail of the window.
+  useEffect(() => {
+    if (!list || sessionPhrases.length === 0 || status !== "active") return;
+
+    const currentIndex = progress.current - 1;
+    // The initial window (indices 0..WINDOW_SIZE-1) is already warmed at session start
+    if (currentIndex <= 0) return;
+
+    const evictPhrase = sessionPhrases[currentIndex - 1];
+    if (evictPhrase && speech.forget) {
+      speech.forget([evictPhrase.acceptedTranslations[0]], list.targetLanguage);
+      speech.forget([evictPhrase.nativeSentence], list.nativeLanguage);
+    }
+
+    const enterPhrase = sessionPhrases[currentIndex + WINDOW_SIZE - 1];
+    if (enterPhrase && speech.pregenerate) {
+      speech.pregenerate([enterPhrase.acceptedTranslations[0]], list.targetLanguage);
+      speech.pregenerate([enterPhrase.nativeSentence], list.nativeLanguage);
+    }
+  }, [progress.current]);
 
   // Auto-speak the native sentence when phrase changes, then activate voice mode.
   // On the very first phrase, an intro is read before it.
@@ -144,7 +197,7 @@ export default function PracticeScreen() {
 
       (async () => {
         if (withIntro) {
-          await speak(buildIntro(list.targetLanguage), list.nativeLanguage);
+          await speakFixed(buildIntro(list.targetLanguage), list.nativeLanguage);
         }
         await speak(currentPhrase.nativeSentence, list.nativeLanguage);
       })().then(() => {
@@ -348,7 +401,7 @@ export default function PracticeScreen() {
     const prefix = result.isCorrect ? FEEDBACK_CORRECT : FEEDBACK_INCORRECT;
     const correctAnswer = currentPhrase.acceptedTranslations[0];
 
-    speak(prefix, list.nativeLanguage).then(() => {
+    speakFixed(prefix, list.nativeLanguage).then(() => {
       speak(correctAnswer, list.targetLanguage).then(() => {
         startTimer(result.isCorrect ? TIMER_CORRECT_SECONDS : TIMER_INCORRECT_SECONDS);
         if (voiceMode) {

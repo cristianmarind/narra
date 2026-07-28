@@ -1,5 +1,5 @@
-import { useRouter } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -27,10 +27,29 @@ export default function HomeScreen() {
   // TTS warmup state (non-blocking)
   const [warmupStatus, setWarmupStatus] = useState<string | null>(null);
 
-  // On mount and when lists change, persist the audio that's always needed:
-  // the app's fixed phrases first, then the first phrase of each list.
+  // On mount and when lists change, warm the audio that's always needed:
+  // the app's fixed phrases (pinned, permanent) first, then the first phrase
+  // of each list (persisted, but may be regenerated on a speed change).
   useEffect(() => {
-    if (loading || lists.length === 0 || !speech.pregeneratePersistent) return;
+    if (loading || lists.length === 0) return;
+
+    // Fixed app phrases ("Correcto", "Incorrecto", the intro) — pinned so they
+    // survive a speed change, and always available no matter which list opens.
+    // No progress banner: these are three short phrases per language, and the
+    // per-list loop below already reports progress for the bulk of the work.
+    if (speech.pregeneratePinned) {
+      const byNativeLang = new Map<string, Set<string>>();
+      for (const list of lists) {
+        const prompts = byNativeLang.get(list.nativeLanguage) ?? new Set<string>();
+        for (const prompt of fixedPromptsFor(list.targetLanguage)) prompts.add(prompt);
+        byNativeLang.set(list.nativeLanguage, prompts);
+      }
+      for (const [language, prompts] of byNativeLang) {
+        speech.pregeneratePinned(Array.from(prompts), language);
+      }
+    }
+
+    if (!speech.pregeneratePersistent) return;
 
     // { text, language, label } — label is what the warmup banner shows
     const queue: { text: string; language: string; label: string }[] = [];
@@ -43,14 +62,6 @@ export default function HomeScreen() {
       seen.add(key);
       queue.push({ text, language, label });
     };
-
-    // Fixed app phrases ("Correcto", "Incorrecto", the intro) go first so they
-    // are always available, no matter which list the user opens.
-    for (const list of lists) {
-      for (const prompt of fixedPromptsFor(list.targetLanguage)) {
-        enqueue(prompt, list.nativeLanguage, "mensajes de la app");
-      }
-    }
 
     for (const list of lists) {
       if (list.phrases.length === 0) continue;
@@ -92,12 +103,16 @@ export default function HomeScreen() {
     })();
   }, [loading, lists.length]);
 
-  // Clear session cache when returning to home
-  useEffect(() => {
-    if (speech.clearSessionCache) {
-      speech.clearSessionCache();
-    }
-  }, []);
+  // Returning home ends any list/practice flow: abandon their still-queued
+  // warmups and drop the session cache (pinned/persisted entries survive).
+  // Focus, not mount — the lobby stays mounted underneath the stack, so a
+  // mount-only effect would never fire again on the way back.
+  useFocusEffect(
+    useCallback(() => {
+      speech.cancelWarmups?.();
+      speech.clearSessionCache?.();
+    }, [speech])
+  );
 
   /** Most recent practice across all lists, for the subtitle */
   const lastActivity = useMemo(() => {
