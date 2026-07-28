@@ -72,9 +72,17 @@ El usuario traduce oraciones de su idioma nativo al idioma objetivo.
 - Node **no** está instalado en el host de Windows. Cualquier comando de node, npm o tsc
   debe ejecutarse dentro del contenedor con `docker compose exec -T client sh -c '...'`
   (usar comillas simples por fuera; las dobles se rompen en este shell).
-- `tsc --noEmit` completo mata la sesión de `docker compose exec`, probablemente por
-  memoria del contenedor. No insistir con eso.
-- Para verificar que un cambio compila, pedir el bundle de Metro:
+- `tsc --noEmit` corre bien, pero su salida por stdout mata la sesión de
+  `docker compose exec`. La vuelta: redirigir a un archivo dentro de un volumen montado
+  y leerlo desde el host. `/app/src` mapea a `client/src`, así que:
+
+  ```
+  docker compose exec -T client sh -c './node_modules/.bin/tsc --noEmit > /app/src/tsc-out.txt 2>&1; echo "EXIT=$?" >> /app/src/tsc-out.txt'
+  ```
+
+  Después leer `client/src/tsc-out.txt` y **borrarlo**, que si no queda en el árbol de
+  fuentes. Este es el chequeo de tipos real; hacerlo antes de dar un cambio por terminado.
+- Para verificar que un cambio compila y que los imports resuelven, pedir el bundle de Metro:
   `http://localhost:8081/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=src%2Fapp&transform.reactCompiler=true`
   Un 200 confirma que los imports resuelven y que todo transpila.
 - El file watcher de Metro **no** detecta cambios a través de los volúmenes de Docker en

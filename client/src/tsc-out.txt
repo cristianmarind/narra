@@ -1,2 +1,0 @@
-src/app/list/import.tsx(318,19): error TS2551: Property 'absoluteFillObject' does not exist on type 'typeof StyleSheet'. Did you mean 'absoluteFill'?
-DONE_EXIT=True
