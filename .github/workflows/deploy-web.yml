@@ -35,7 +35,7 @@ jobs:
         run: npm ci
 
       - name: Export web build
-        run: npx expo export -p web --output-dir dist
+        run: NODE_ENV=production npx expo export -p web --output-dir dist
 
       - name: Add .nojekyll
         run: touch dist/.nojekyll

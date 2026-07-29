@@ -14,6 +14,7 @@ import { useBreakpoint } from "@/hooks/use-breakpoint";
 import { PhraseListsProvider } from "@/hooks/use-phrase-lists";
 import { TtsSpeedProvider } from "@/hooks/use-tts-speed";
 import { UserLevelProvider } from "@/hooks/use-user-level";
+import { useAppLoading } from "@/hooks/use-app-loading";
 import { ServicesProvider } from "@/services";
 
 SplashScreen.preventAutoHideAsync();
@@ -21,13 +22,10 @@ SplashScreen.preventAutoHideAsync();
 function RootLayoutInner() {
   const { mode, colors } = useAppTheme();
   const { isCompact } = useBreakpoint();
+  const { loadingMessage } = useAppLoading();
   const router = useRouter();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-
-  useEffect(() => {
-    SplashScreen.hideAsync();
-  }, []);
 
   // Leaving the compact layout would strand the drawer open behind the sidebar
   useEffect(() => {
@@ -100,6 +98,16 @@ function RootLayoutInner() {
         </View>
       </View>
 
+      {/* Loading overlay during splash */}
+      {loadingMessage && (
+        <View style={styles.loadingOverlay}>
+          <View style={styles.loadingContent}>
+            <NarraLogo size={76} color={Brand.onPrimary} variant="dark" />
+            <Text style={styles.loadingText}>{loadingMessage}</Text>
+          </View>
+        </View>
+      )}
+
       <NavDrawer
         visible={drawerOpen}
         onClose={() => setDrawerOpen(false)}
@@ -146,5 +154,25 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.6,
+  },
+  loadingOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: Brand.primary,
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 9999,
+  },
+  loadingContent: {
+    alignItems: "center",
+    gap: 24,
+  },
+  loadingText: {
+    color: Brand.accentSoft,
+    fontSize: 14,
+    fontWeight: "500",
   },
 });

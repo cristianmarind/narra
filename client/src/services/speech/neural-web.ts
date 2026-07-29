@@ -97,9 +97,8 @@ interface EngineSpec {
 }
 
 // Workers live in /public, so their URL must include the deploy base path
-// (e.g. "/narra" on GitHub Pages). Inlined at build time from app.json's
-// experiments.baseUrl; empty in dev.
-const BASE_URL = (process.env.EXPO_BASE_URL || "").replace(/\/$/, "");
+// (e.g. "/narra" on GitHub Pages). Uses EXPO_PUBLIC_BASE_URL from .env files.
+const BASE_URL = (process.env.EXPO_PUBLIC_BASE_URL || "").replace(/\/$/, "");
 
 const ENGINES: Record<EngineId, EngineSpec> = {
   // Kokoro accepts a `speed` argument and is small enough to preload
