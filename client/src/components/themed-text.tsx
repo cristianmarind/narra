@@ -1,7 +1,7 @@
 import { Platform, StyleSheet, Text, type TextProps } from 'react-native';
 
 import { Brand, Fonts, ThemeColor } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
+import { useAppTheme } from '@/hooks/use-app-theme';
 
 export type ThemedTextProps = TextProps & {
   type?:
@@ -18,12 +18,12 @@ export type ThemedTextProps = TextProps & {
 };
 
 export function ThemedText({ style, type = 'default', themeColor, ...rest }: ThemedTextProps) {
-  const theme = useTheme();
+  const { colors } = useAppTheme();
 
   return (
     <Text
       style={[
-        { color: theme[themeColor ?? 'text'] },
+        { color: colors[themeColor ?? 'text'] },
         type === 'default' && styles.default,
         type === 'title' && styles.title,
         type === 'pageTitle' && styles.pageTitle,

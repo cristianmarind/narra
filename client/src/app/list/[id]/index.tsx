@@ -13,7 +13,7 @@ import { ThemedView } from "@/components/themed-view";
 import { Brand, Layout, Radius, Spacing } from "@/constants/theme";
 import { useBreakpoint } from "@/hooks/use-breakpoint";
 import { usePhraseLists } from "@/hooks/use-phrase-lists";
-import { useTheme } from "@/hooks/use-theme";
+import { useAppTheme } from "@/hooks/use-app-theme";
 import { useServices } from "@/services";
 import type { Phrase, PhraseList } from "@/types";
 import { confirm, formatRelativeTime, getListStats, shuffle } from "@/utils";
@@ -26,7 +26,7 @@ export default function ListDetailScreen() {
   const { lists, deleteList, setListPreference } = usePhraseLists();
   const { speech } = useServices();
   const { isExpanded } = useBreakpoint();
-  const colors = useTheme();
+  const { colors } = useAppTheme();
   const router = useRouter();
   const [list, setList] = useState<PhraseList | null>(null);
   const [voiceMode, setVoiceMode] = useState(false);

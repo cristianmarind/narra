@@ -1,18 +1,18 @@
 import { TextInput, type TextInputProps } from "react-native";
 
-import { useTheme } from "@/hooks/use-theme";
+import { useAppTheme } from "@/hooks/use-app-theme";
 
 /**
  * TextInput that automatically uses the correct text color based on the current theme.
  */
 export function ThemedTextInput(props: TextInputProps) {
-  const theme = useTheme();
+  const { colors } = useAppTheme();
 
   return (
     <TextInput
-      placeholderTextColor={theme.textSecondary}
+      placeholderTextColor={colors.textSecondary}
       {...props}
-      style={[{ color: theme.text }, props.style]}
+      style={[{ color: colors.text }, props.style]}
     />
   );
 }

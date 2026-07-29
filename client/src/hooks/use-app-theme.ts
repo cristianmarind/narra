@@ -1,13 +1,15 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+import { Colors } from "@/constants/theme";
+
 type ThemeMode = "light" | "dark";
 
 interface AppThemeContextValue {
-  /** The resolved theme (always "light" or "dark") */
-  theme: "light" | "dark";
-  /** The user's preference */
+  /** The current theme mode ("light" or "dark") */
   mode: ThemeMode;
+  /** Color palette for the current theme */
+  colors: typeof Colors.light | typeof Colors.dark;
   /** Toggle between light and dark */
   toggle: () => void;
   /** Set a specific mode */
@@ -43,8 +45,8 @@ export function AppThemeProvider({ children }: { children: React.ReactNode }) {
   }, [mode, setMode]);
 
   const value: AppThemeContextValue = {
-    theme: mode,
     mode,
+    colors: Colors[mode],
     toggle,
     setMode,
   };

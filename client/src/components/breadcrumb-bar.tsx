@@ -5,7 +5,7 @@ import type { Crumb } from "@/components/breadcrumb";
 import { ContentContainer } from "@/components/content-container";
 import { Layout, Spacing } from "@/constants/theme";
 import { useBreakpoint } from "@/hooks/use-breakpoint";
-import { useTheme } from "@/hooks/use-theme";
+import { useAppTheme } from "@/hooks/use-app-theme";
 
 /**
  * Top bar carrying the breadcrumb trail on wide layouts.
@@ -16,7 +16,7 @@ import { useTheme } from "@/hooks/use-theme";
  */
 export function BreadcrumbBar({ items }: { items: Crumb[] }) {
   const { isExpanded } = useBreakpoint();
-  const colors = useTheme();
+  const { colors } = useAppTheme();
 
   if (!isExpanded) return null;
 

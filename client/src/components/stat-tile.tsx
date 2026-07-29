@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from "react-native";
 
 import { Radius, Spacing } from "@/constants/theme";
-import { useTheme } from "@/hooks/use-theme";
+import { useAppTheme } from "@/hooks/use-app-theme";
 
 interface StatTileProps {
   value: string | number;
@@ -15,7 +15,7 @@ interface StatTileProps {
  * Replaces the stacked plain text stats, which were hard to scan.
  */
 export function StatTile({ value, label, color }: StatTileProps) {
-  const colors = useTheme();
+  const { colors } = useAppTheme();
 
   return (
     <View style={[styles.tile, { backgroundColor: colors.surfaceMuted }]}>

@@ -2,7 +2,7 @@ import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { Kbd } from "@/components/kbd";
 import { Brand, Radius, Spacing } from "@/constants/theme";
-import { useTheme } from "@/hooks/use-theme";
+import { useAppTheme } from "@/hooks/use-app-theme";
 
 interface AnswerInputProps {
   value: string;
@@ -27,7 +27,7 @@ export function AnswerInput({
   listening,
   onMicPress,
 }: AnswerInputProps) {
-  const colors = useTheme();
+  const { colors } = useAppTheme();
   const canSubmit = value.trim().length > 0;
 
   return (

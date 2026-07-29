@@ -13,7 +13,7 @@ import { Brand, Radius, Spacing } from "@/constants/theme";
 import { fixedPromptsFor } from "@/constants/speech-prompts";
 import { useBreakpoint } from "@/hooks/use-breakpoint";
 import { usePhraseLists } from "@/hooks/use-phrase-lists";
-import { useTheme } from "@/hooks/use-theme";
+import { useAppTheme } from "@/hooks/use-app-theme";
 import { useServices } from "@/services";
 import { formatRelativeTime } from "@/utils";
 
@@ -21,7 +21,7 @@ export default function HomeScreen() {
   const { lists, loading } = usePhraseLists();
   const { speech } = useServices();
   const { isCompact, gridColumns } = useBreakpoint();
-  const colors = useTheme();
+  const { colors } = useAppTheme();
   const router = useRouter();
 
   // TTS warmup state (non-blocking)

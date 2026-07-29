@@ -2,7 +2,7 @@ import { StyleSheet, View } from "react-native";
 import type { StyleProp, ViewStyle } from "react-native";
 
 import { Radius } from "@/constants/theme";
-import { useTheme } from "@/hooks/use-theme";
+import { useAppTheme } from "@/hooks/use-app-theme";
 
 interface ProgressBarProps {
   /** 0-100 */
@@ -14,7 +14,7 @@ interface ProgressBarProps {
 
 /** Thin track with a colored fill, used for accuracy and session progress. */
 export function ProgressBar({ percent, color, height = 4, style }: ProgressBarProps) {
-  const colors = useTheme();
+  const { colors } = useAppTheme();
   const clamped = Math.max(0, Math.min(100, percent));
 
   return (

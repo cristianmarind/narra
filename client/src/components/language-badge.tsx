@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from "react-native";
 
 import { LanguageBadge as BadgeColors, Radius, Spacing } from "@/constants/theme";
-import { useTheme } from "@/hooks/use-theme";
+import { useAppTheme } from "@/hooks/use-app-theme";
 
 interface LanguagePairProps {
   native: string;
@@ -13,7 +13,7 @@ interface LanguagePairProps {
  * Two tones so the direction of translation reads at a glance.
  */
 export function LanguagePair({ native, target }: LanguagePairProps) {
-  const colors = useTheme();
+  const { colors } = useAppTheme();
 
   return (
     <View style={styles.row}>

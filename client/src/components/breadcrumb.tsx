@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { Spacing } from "@/constants/theme";
-import { useTheme } from "@/hooks/use-theme";
+import { useAppTheme } from "@/hooks/use-app-theme";
 
 export interface Crumb {
   label: string;
@@ -16,7 +16,7 @@ export interface Crumb {
  * typically render this only on wider layouts.
  */
 export function Breadcrumb({ items }: { items: Crumb[] }) {
-  const colors = useTheme();
+  const { colors } = useAppTheme();
 
   return (
     <View style={styles.row} accessibilityRole="header">

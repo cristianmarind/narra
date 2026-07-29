@@ -4,7 +4,7 @@ import { LanguagePair } from "@/components/language-badge";
 import { ProgressBar } from "@/components/progress-bar";
 import { ThemedText } from "@/components/themed-text";
 import { Brand, Radius, Spacing } from "@/constants/theme";
-import { useTheme } from "@/hooks/use-theme";
+import { useAppTheme } from "@/hooks/use-app-theme";
 import type { PhraseList } from "@/types";
 import { formatRelativeTime, getListStats } from "@/utils";
 
@@ -23,7 +23,7 @@ interface ListCardProps {
  * on without opening each list, which was the main gap in the old row layout.
  */
 export function ListCard({ list, onPress }: ListCardProps) {
-  const colors = useTheme();
+  const { colors } = useAppTheme();
   const { accuracy } = getListStats(list);
   const lastPracticed = formatRelativeTime(list.lastPracticedAt);
 
@@ -79,7 +79,7 @@ export function ListCard({ list, onPress }: ListCardProps) {
 
 /** Dashed tile that sits at the end of the grid as an inline create action. */
 export function NewListCard({ onPress }: { onPress: () => void }) {
-  const colors = useTheme();
+  const { colors } = useAppTheme();
 
   return (
     <Pressable

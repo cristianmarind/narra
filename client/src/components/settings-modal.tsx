@@ -3,7 +3,7 @@ import { Modal, Pressable, StyleSheet, View } from "react-native";
 import { SettingsPanel } from "@/components/settings-panel";
 import { ThemedText } from "@/components/themed-text";
 import { Layout, Radius, Spacing } from "@/constants/theme";
-import { useTheme } from "@/hooks/use-theme";
+import { useAppTheme } from "@/hooks/use-app-theme";
 
 interface SettingsModalProps {
   visible: boolean;
@@ -12,7 +12,7 @@ interface SettingsModalProps {
 
 /** Centered dialog holding the settings panel. */
 export function SettingsModal({ visible, onClose }: SettingsModalProps) {
-  const colors = useTheme();
+  const { colors } = useAppTheme();
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>

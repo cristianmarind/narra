@@ -14,15 +14,13 @@ import { useBreakpoint } from "@/hooks/use-breakpoint";
 import { PhraseListsProvider } from "@/hooks/use-phrase-lists";
 import { TtsSpeedProvider } from "@/hooks/use-tts-speed";
 import { UserLevelProvider } from "@/hooks/use-user-level";
-import { useTheme } from "@/hooks/use-theme";
 import { ServicesProvider } from "@/services";
 
 SplashScreen.preventAutoHideAsync();
 
 function RootLayoutInner() {
-  const { theme } = useAppTheme();
+  const { mode, colors } = useAppTheme();
   const { isCompact } = useBreakpoint();
-  const colors = useTheme();
   const router = useRouter();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -49,7 +47,7 @@ function RootLayoutInner() {
   );
 
   return (
-    <ThemeProvider value={theme === "dark" ? DarkTheme : DefaultTheme}>
+    <ThemeProvider value={mode === "dark" ? DarkTheme : DefaultTheme}>
       <View style={[styles.shell, { backgroundColor: colors.background }]}>
         {/* Persistent navigation from `md` up; below that it lives in the drawer */}
         {!isCompact && <AppSidebar onOpenSettings={() => setSettingsOpen(true)} />}

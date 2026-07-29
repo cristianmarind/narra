@@ -4,7 +4,6 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { ThemedText } from "@/components/themed-text";
 import { Brand, Radius, Spacing } from "@/constants/theme";
 import { useAppTheme } from "@/hooks/use-app-theme";
-import { useTheme } from "@/hooks/use-theme";
 import { useTtsSpeed } from "@/hooks/use-tts-speed";
 import { useUserLevel } from "@/hooks/use-user-level";
 import { useServices } from "@/services";
@@ -37,11 +36,10 @@ const STATUS_COLOR: Record<VoiceEngineStatus, string> = {
  * is the same panel on desktop and mobile.
  */
 export function SettingsPanel() {
-  const { mode, setMode } = useAppTheme();
+  const { mode, setMode, colors } = useAppTheme();
   const { speed, setSpeed } = useTtsSpeed();
   const { level, setLevel } = useUserLevel();
   const { speech } = useServices();
-  const colors = useTheme();
 
   const [engineStatuses, setEngineStatuses] = useState<{
     english: VoiceEngineStatus;
@@ -165,7 +163,7 @@ function OptionButton({
   active: boolean;
   onPress: () => void;
 }) {
-  const colors = useTheme();
+  const { colors } = useAppTheme();
 
   return (
     <Pressable

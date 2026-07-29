@@ -22,7 +22,7 @@ import { usePhraseLists } from "@/hooks/use-phrase-lists";
 import { usePracticeSession } from "@/hooks/use-practice-session";
 import { useSpeech } from "@/hooks/use-speech";
 import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
-import { useTheme } from "@/hooks/use-theme";
+import { useAppTheme } from "@/hooks/use-app-theme";
 import { useUserLevel } from "@/hooks/use-user-level";
 import { useServices } from "@/services";
 import type { Phrase, PhraseList, PhraseResult, SessionAd } from "@/types";
@@ -107,7 +107,7 @@ export default function PracticeScreen() {
   const { lists, addUserTranslation, recordPhraseResult } = usePhraseLists();
   const { speech, ads } = useServices();
   const { level: userLevel } = useUserLevel();
-  const colors = useTheme();
+  const { colors } = useAppTheme();
   const router = useRouter();
   const { speak, speakFixed, speaking, stop: stopSpeaking } = useSpeech();
   const {

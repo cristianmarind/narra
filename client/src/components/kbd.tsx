@@ -1,7 +1,7 @@
 import { Platform, StyleSheet, Text, View } from "react-native";
 
 import { Radius } from "@/constants/theme";
-import { useTheme } from "@/hooks/use-theme";
+import { useAppTheme } from "@/hooks/use-app-theme";
 
 /**
  * Keyboard shortcut hint, styled like an HTML `<kbd>`.
@@ -9,7 +9,7 @@ import { useTheme } from "@/hooks/use-theme";
  * Renders nothing on native, where there is no physical keyboard to press.
  */
 export function Kbd({ children }: { children: string }) {
-  const colors = useTheme();
+  const { colors } = useAppTheme();
 
   if (Platform.OS !== "web") return null;
 
