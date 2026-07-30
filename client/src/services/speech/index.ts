@@ -6,11 +6,14 @@
  * injected directly in tests or swapped from the provider.
  */
 
-export { createDefaultSpeechService } from "./factory";
+export { createDefaultSpeechService } from "./utils/factory";
 
-export { createExpoSpeechService } from "./expo-speech";
-export { createExecuTorchSpeechService } from "./executorch";
-export { createNeuralWebSpeechService } from "./neural-web";
-export type { NeuralWebSpeechService } from "./neural-web";
+export { createExpoSpeechService } from "./speeches/default-speech";
+export { createNeuralWebSpeechService } from "./speeches/speech-web";
+export type { NeuralWebSpeechService } from "./speeches/speech-web";
+export { createNeuralNativeSpeechService, isNeuralNativeAvailable } from "./speeches/speech-native";
 
-export { speakWithWebSpeechAPI, getSelectedVoiceName } from "./web-fallback";
+export { createSpeechCore } from "./core";
+export type { SpeechCoreService, SpeechCoreDeps, Engine, AudioStore, Player, Waveform } from "./core";
+
+export { speakWithWebSpeechAPI, getSelectedVoiceName } from "./utils/speech-web-fallback";

@@ -1,9 +1,9 @@
-/**./storage/async-storage
+/**
  * Public surface of the services layer.
- *./speech/executorch
+ *
  * Screens and hooks should get services through `useServices()` rather than
- * importing an implementation directly, so the plat./recognition/expo-recognition one
- * place and tests can inject fakes vi./speech/web-fallbackverrides`.
+ * importing an implementation directly, so the platform selection lives in one
+ * place and tests can inject fakes via `overrides`.
  */
 
 export { ServicesProvider, useServices } from "./provider";

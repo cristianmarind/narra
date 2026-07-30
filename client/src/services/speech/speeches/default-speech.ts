@@ -1,5 +1,6 @@
 import * as ExpoSpeech from "expo-speech";
 import type { SpeechService } from "@/types";
+import { toDeviceLocale } from "../utils/routing";
 
 /**
  * expo-speech based implementation of SpeechService.
@@ -10,7 +11,7 @@ export function createExpoSpeechService(): SpeechService {
     speak(text: string, language: string): Promise<void> {
       return new Promise<void>((resolve) => {
         ExpoSpeech.speak(text, {
-          language,
+          language: toDeviceLocale(language),
           onDone: () => resolve(),
           onStopped: () => resolve(),
           onError: () => resolve(),

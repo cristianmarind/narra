@@ -47,7 +47,9 @@
           "microphonePermission": "Allow $(PRODUCT_NAME) to use the microphone for speech input.",
           "speechRecognitionPermission": "Allow $(PRODUCT_NAME) to use speech recognition."
         }
-      ]
+      ],
+      "react-native-audio-api",
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true,
