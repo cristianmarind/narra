@@ -157,6 +157,8 @@ export interface SpeechCoreDeps {
 export interface SpeechCoreService extends SpeechService {
   /** Speak a fixed app message at the constant reference speed */
   speakPinned(text: string, language: string): Promise<void>;
+  /** Pre-generate for the session (in-memory only, not persisted) */
+  pregenerate(texts: string[], language: string): void;
   /** Pre-generate and persist audio for first phrases (permanent cache) */
   pregeneratePersistent(
     texts: string[],
@@ -213,40 +215,31 @@ export function createSpeechCore(deps: SpeechCoreDeps): SpeechCoreService {
   // generate() call instead of racing duplicate requests
   const inFlight = new Map<string, Promise<Waveform>>();
 
-  // Interactive generations currently pending. Warmup loops wait for this to
-  // reach zero before each item, so background work never queues in front of
-  // audio the user is waiting on right now.
-  let activeInteractive = 0;
-  let idleWaiters: Array<() => void> = [];
-
   // Bumped by cancelWarmups(); session warmup loops capture it on start and
   // abandon their remaining items once it moves on
   let warmupEpoch = 0;
-
-  function noteInteractiveStart() {
-    activeInteractive++;
-  }
-
-  function noteInteractiveEnd() {
-    activeInteractive = Math.max(0, activeInteractive - 1);
-    if (activeInteractive === 0) {
-      const waiters = idleWaiters;
-      idleWaiters = [];
-      waiters.forEach((resolve) => resolve());
-    }
-  }
-
-  /** Resolves once no interactive generation is pending (re-checks after each wake) */
-  async function untilInteractiveIdle(): Promise<void> {
-    while (activeInteractive > 0) {
-      await new Promise<void>((resolve) => idleWaiters.push(resolve));
-    }
-  }
 
   /** True when this voice's cached audio has the speed baked in (so it goes stale on a speed change) */
   function isSpeedDependentVoice(voice: string): boolean {
     const engine = deps.voiceEngine[voice];
     return engine ? engines[engine].speedInGeneration : false;
+  }
+
+  /**
+   * Load a key from the persistent store, self-healing if it's empty. A
+   * broken engine can persist audio with no actual samples (seen with
+   * Kokoro/ExecuTorch); serving that forever would mean a permanently silent
+   * phrase, so treat it as a miss and evict it once found.
+   */
+  async function loadValidPersisted(key: string): Promise<Waveform | null> {
+    const persisted = await store.load(key);
+    if (!persisted) return null;
+    if (persisted.audio.length === 0) {
+      persistedKeys.delete(key);
+      await store.remove([key]);
+      return null;
+    }
+    return persisted;
   }
 
   /**
@@ -269,7 +262,7 @@ export function createSpeechCore(deps: SpeechCoreDeps): SpeechCoreService {
 
     const promise = (async (): Promise<Waveform> => {
       if (!opts.skipPersistedLookup) {
-        const persisted = await store.load(key);
+        const persisted = await loadValidPersisted(key);
         if (persisted) {
           sessionCache.set(key, persisted);
           return persisted;
@@ -280,8 +273,18 @@ export function createSpeechCore(deps: SpeechCoreDeps): SpeechCoreService {
       const waveform = await engines[route.engine].generate(text, route.voice, speed, {
         intent,
         // If it arrives after we gave up, cache it so the next attempt is instant
-        onLate: (late) => sessionCache.set(key, late),
+        onLate: (late) => {
+          if (late.audio.length > 0) sessionCache.set(key, late);
+        },
       });
+
+      // A broken engine can resolve successfully with no actual audio (seen
+      // with Kokoro/ExecuTorch on x86_64 emulators). Treat that as a failure
+      // here rather than letting it reach the player, which would throw a
+      // much more confusing "0-length buffer" error at playback time.
+      if (waveform.audio.length === 0) {
+        throw new Error(`${route.engine} returned empty audio for "${text}"`);
+      }
 
       sessionCache.set(key, waveform);
       return waveform;
@@ -302,7 +305,28 @@ export function createSpeechCore(deps: SpeechCoreDeps): SpeechCoreService {
     return Math.min(Math.max(getSpeed(), 0.5), 2);
   }
 
-  return {
+  /**
+   * Look up an already-generated waveform (memory, then persisted store)
+   * WITHOUT triggering generation. Interactive playback must be instant, and
+   * on-device inference is not — so speak()/speakPinned() only ever play
+   * audio that's already sitting in one of these two places.
+   */
+  async function peekCached(text: string, route: Route): Promise<Waveform | null> {
+    const key = cacheKey(text, route.voice);
+
+    const memCached = sessionCache.get(key);
+    if (memCached) return memCached;
+
+    const persisted = await loadValidPersisted(key);
+    if (persisted) {
+      sessionCache.set(key, persisted);
+      return persisted;
+    }
+
+    return null;
+  }
+
+  const service: SpeechCoreService = {
     async speak(text: string, language: string): Promise<void> {
       isSpeakingNow = true;
       const route = routeLanguage(language);
@@ -313,22 +337,24 @@ export function createSpeechCore(deps: SpeechCoreDeps): SpeechCoreService {
           // A pinned message that hasn't finished warming yet still needs its
           // fixed speed, not whatever the user has selected
           const pinned = pinnedKeys.has(cacheKey(text, route.voice));
-          noteInteractiveStart();
-          let waveform: Waveform;
-          try {
-            waveform = await getWaveform(text, route, "interactive", {
-              speedOverride: pinned ? PINNED_SPEED : undefined,
-            });
-          } finally {
-            noteInteractiveEnd();
+          const cached = await peekCached(text, route);
+
+          if (cached) {
+            await player.play(cached, playbackRateFor(route.engine));
+          } else {
+            // Not generated yet: on-device inference isn't instant, so speak
+            // right away with the fallback voice instead of making the user
+            // wait, and warm this phrase in the background so next time it's
+            // the (better) neural voice, played instantly from cache.
+            await fallbackSpeak(text, language, pinned ? PINNED_SPEED : getSpeed());
+            service.pregenerate([text], language);
           }
-          await player.play(waveform, playbackRateFor(route.engine));
         } else {
           await fallbackSpeak(text, language, getSpeed());
         }
       } catch (error) {
-        // Expected when the model is still loading or its download failed. The
-        // plain voice is worse, but silence is worse than that.
+        // Expected when the engine itself is down (cooldown, load failure).
+        // The plain voice is worse, but silence is worse than that.
         console.warn("[TTS] using fallback voice:", (error as Error).message);
         try {
           await fallbackSpeak(text, language, getSpeed());
@@ -346,16 +372,14 @@ export function createSpeechCore(deps: SpeechCoreDeps): SpeechCoreService {
       try {
         if (route && engines[route.engine].isAvailable()) {
           pinnedKeys.add(cacheKey(text, route.voice));
-          noteInteractiveStart();
-          let waveform: Waveform;
-          try {
-            waveform = await getWaveform(text, route, "interactive", {
-              speedOverride: PINNED_SPEED,
-            });
-          } finally {
-            noteInteractiveEnd();
+          const cached = await peekCached(text, route);
+
+          if (cached) {
+            await player.play(cached, playbackRateFor(route.engine));
+          } else {
+            await fallbackSpeak(text, language, PINNED_SPEED);
+            service.pregeneratePinned([text], language);
           }
-          await player.play(waveform, playbackRateFor(route.engine));
         } else {
           await fallbackSpeak(text, language, PINNED_SPEED);
         }
@@ -383,7 +407,8 @@ export function createSpeechCore(deps: SpeechCoreDeps): SpeechCoreService {
      * Pre-generate for the session (in-memory only, not persisted).
      * Concurrent/duplicate requests for the same text are coalesced by
      * getWaveform, so callers don't need to track in-flight keys themselves.
-     * The batch yields to interactive requests and dies on cancelWarmups().
+     * The batch dies on cancelWarmups(); the engine itself serializes actual
+     * generation, so a stale batch can't queue in front of fresher requests.
      */
     pregenerate(texts: string[], language: string): void {
       const route = routeLanguage(language);
@@ -392,8 +417,6 @@ export function createSpeechCore(deps: SpeechCoreDeps): SpeechCoreService {
       const epoch = warmupEpoch;
       (async () => {
         for (const text of texts) {
-          // Don't queue in front of audio the user is waiting on
-          await untilInteractiveIdle();
           // Abandon leftovers from a screen the user already left
           if (epoch !== warmupEpoch) return;
           // Stop the whole batch if the engine went down mid-way
@@ -432,9 +455,6 @@ export function createSpeechCore(deps: SpeechCoreDeps): SpeechCoreService {
         const text = texts[i];
         const key = cacheKey(text, route.voice);
 
-        // Persistence is background work: let interactive audio go first
-        await untilInteractiveIdle();
-
         if (persistedKeys.has(key)) {
           onProgress?.(i + 1, texts.length, text, "cached");
           continue;
@@ -444,7 +464,7 @@ export function createSpeechCore(deps: SpeechCoreDeps): SpeechCoreService {
 
         // One lookup, not two: check memory, then the store exactly once
         if (!sessionCache.has(key)) {
-          const persisted = await store.load(key);
+          const persisted = await loadValidPersisted(key);
           if (persisted) sessionCache.set(key, persisted);
         }
         if (sessionCache.has(key)) {
@@ -486,11 +506,8 @@ export function createSpeechCore(deps: SpeechCoreDeps): SpeechCoreService {
 
         if (persistedKeys.has(key) || sessionCache.has(key)) continue;
 
-        // Pinning is background work: let interactive audio go first
-        await untilInteractiveIdle();
-
         if (!sessionCache.has(key)) {
-          const persisted = await store.load(key);
+          const persisted = await loadValidPersisted(key);
           if (persisted) sessionCache.set(key, persisted);
         }
         if (sessionCache.has(key)) {
@@ -584,4 +601,6 @@ export function createSpeechCore(deps: SpeechCoreDeps): SpeechCoreService {
       await store.remove(toDelete);
     },
   };
+
+  return service;
 }
