@@ -1,6 +1,14 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Linking, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  KeyboardAvoidingView,
+  Linking,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ContentContainer } from "@/components/content-container";
@@ -547,7 +555,10 @@ export default function PracticeScreen() {
     cancelSpeech();
     stopTimer();
     if (listening) stopListening();
-    router.replace(`/list/${id}`);
+    // Detail is already underneath practice on the stack — pop back to it
+    // instead of pushing a duplicate instance (which made the real one
+    // underneath look like it "refreshed" on the next back press).
+    router.back();
   }
 
   if (!list || status === "idle") {
@@ -591,7 +602,13 @@ export default function PracticeScreen() {
           </View>
         )}
 
-        {/* The phrase gets the vertical space; everything else hugs the edges */}
+        {/* The phrase gets the vertical space; everything else hugs the edges.
+            Wrapped in KeyboardAvoidingView so the footer's AnswerInput stays
+            above the keyboard instead of being covered by it. */}
+        <KeyboardAvoidingView
+          style={styles.keyboardAvoiding}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
         <ContentContainer maxWidth={Layout.readingMaxWidth} style={styles.stage}>
           <View style={styles.phraseArea}>
             {currentPhrase?.sponsoredBy && (
@@ -681,6 +698,7 @@ export default function PracticeScreen() {
             )}
           </View>
         </ContentContainer>
+        </KeyboardAvoidingView>
       </SafeAreaView>
     </ThemedView>
   );
@@ -726,6 +744,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     borderRadius: Radius.pill,
     backgroundColor: Brand.primary,
+  },
+  keyboardAvoiding: {
+    flex: 1,
   },
   voiceIndicatorText: {
     color: Brand.accentSoft,

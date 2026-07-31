@@ -66,7 +66,7 @@ export default function ResultsScreen() {
           </Pressable>
 
           <Pressable
-            onPress={() => router.replace("/")}
+            onPress={() => router.dismissAll()}
             style={({ pressed }) => [
               styles.button,
               styles.primaryButton,
