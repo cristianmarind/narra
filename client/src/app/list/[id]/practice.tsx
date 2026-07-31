@@ -34,7 +34,7 @@ import { useAppTheme } from "@/hooks/use-app-theme";
 import { useUserLevel } from "@/hooks/use-user-level";
 import { useServices } from "@/services";
 import type { Phrase, PhraseList, PhraseResult, SessionAd } from "@/types";
-import { playBeep } from "@/utils";
+import { homologateSpokenAnswer, playBeep } from "@/utils";
 
 const TIMER_CORRECT_SECONDS = 3;
 const TIMER_INCORRECT_SECONDS = 15;
@@ -103,6 +103,18 @@ function insertSessionAd(phrases: Phrase[], ad: SessionAd): Phrase[] {
  */
 type VoicePhase = "answer" | "pre-command" | "post-command" | null;
 
+/** Recognizer biasing for command phases: the only words we expect to hear */
+const COMMAND_CONTEXT = [
+  "verify",
+  "verificar",
+  "repeat",
+  "repetir",
+  "next",
+  "siguiente",
+  "stop",
+  "parar",
+];
+
 export default function PracticeScreen() {
   const { id, voiceMode: voiceModeParam, order: orderParam } = useLocalSearchParams<{
     id: string;
@@ -153,6 +165,9 @@ export default function PracticeScreen() {
   const [voicePhase, setVoicePhase] = useState<VoicePhase>(null);
   const voicePhaseRef = useRef<VoicePhase>(null);
   const answerRef = useRef("");
+  // True while the answer field holds a transcript (vs typed text). Spoken
+  // answers get homologated when listening ends; typed ones never do.
+  const answerSpokenRef = useRef(false);
 
   // The intro is spoken only before the first phrase of the session
   const introSpokenRef = useRef(false);
@@ -286,6 +301,7 @@ export default function PracticeScreen() {
 
     if (phase === "answer") {
       // Just capture into the answer field
+      answerSpokenRef.current = true;
       setAnswer(transcript);
     } else if (phase === "pre-command") {
       if (normalized.includes("verify") || normalized.includes("verificar")) {
@@ -300,6 +316,7 @@ export default function PracticeScreen() {
         setVoicePhase(null);
         if (listening) stopListening();
         // Clear answer, re-read phrase, go back to answer phase
+        answerSpokenRef.current = false;
         setAnswer("");
         if (currentPhrase && list) {
           playBeep(600, 100);
@@ -332,13 +349,39 @@ export default function PracticeScreen() {
       }
     } else if (!phase && !voiceMode) {
       // Manual mic usage (non-voice mode)
+      answerSpokenRef.current = true;
       setAnswer(transcript);
     }
   }, [transcript]);
 
-  // When listening stops in voice mode, handle re-activation based on phase
+  // When listening stops: homologate the dictated answer (so the user sees
+  // what was accepted BEFORE verifying), then in voice mode re-activate the
+  // mic based on the current phase
   useEffect(() => {
-    if (!voiceMode || listening) return;
+    if (listening) return;
+
+    // Replace misheard-but-close spans (and proper nouns) with the expected
+    // wording, visibly, in the answer field. Typed text is never touched.
+    const homologateAnswer = () => {
+      if (!answerSpokenRef.current || !currentPhrase) return;
+      const spoken = answerRef.current.trim();
+      if (!spoken) return;
+      const homologated = homologateSpokenAnswer(
+        spoken,
+        currentPhrase.acceptedTranslations,
+        currentPhrase.properNouns
+      );
+      if (homologated !== spoken) {
+        answerRef.current = homologated;
+        setAnswer(homologated);
+      }
+    };
+
+    if (!voiceMode) {
+      // Manual mic: give the final result event a beat to land, then homologate
+      const timeout = setTimeout(homologateAnswer, 300);
+      return () => clearTimeout(timeout);
+    }
 
     const phase = voicePhaseRef.current;
     if (!phase) return;
@@ -347,6 +390,7 @@ export default function PracticeScreen() {
       // User finished speaking their answer
       const timeout = setTimeout(() => {
         if (answerRef.current.trim()) {
+          homologateAnswer();
           startVoicePhase("pre-command");
         } else {
           // Nothing captured, try listening again
@@ -362,7 +406,7 @@ export default function PracticeScreen() {
         // Only re-activate if still in the same command phase
         if (voicePhaseRef.current === phase) {
           clearTranscript();
-          listen("en");
+          listen("en", COMMAND_CONTEXT);
         }
       }, 500);
       return () => clearTimeout(timeout);
@@ -387,12 +431,18 @@ export default function PracticeScreen() {
     setVoicePhase(phase);
     clearTranscript();
 
-    // Listen in target language for answers, English for commands
+    // Listen in target language for answers, English for commands. Bias the
+    // recognizer toward what we expect to hear: the phrase's own words (plus
+    // its proper nouns) for answers, the fixed command set for commands.
     const listenLang = phase === "answer" ? list.targetLanguage : "en";
+    const context =
+      phase === "answer" && currentPhrase
+        ? [...currentPhrase.acceptedTranslations, ...(currentPhrase.properNouns ?? [])]
+        : COMMAND_CONTEXT;
     // Delay to avoid catching leftover audio or TTS echo; the guard covers a
     // blur happening inside that delay
     setTimeout(() => {
-      if (isFocusedRef.current) listen(listenLang);
+      if (isFocusedRef.current) listen(listenLang, context);
     }, 400);
   }
 
@@ -484,6 +534,7 @@ export default function PracticeScreen() {
     }
     const result = submitAnswer(answerText);
     setLastResult(result);
+    answerSpokenRef.current = false;
     setAnswer("");
     clearTranscript();
     setVoicePhase(null);
@@ -521,6 +572,7 @@ export default function PracticeScreen() {
     setLastResult(null);
     setVoicePhase(null);
     clearTranscript();
+    answerSpokenRef.current = false;
     setAnswer("");
     next();
   }
@@ -546,7 +598,12 @@ export default function PracticeScreen() {
     if (listening) {
       stopListening();
     } else if (list) {
-      listen(list.targetLanguage);
+      listen(
+        list.targetLanguage,
+        currentPhrase
+          ? [...currentPhrase.acceptedTranslations, ...(currentPhrase.properNouns ?? [])]
+          : undefined
+      );
     }
   }
 
@@ -689,7 +746,11 @@ export default function PracticeScreen() {
             ) : (
               <AnswerInput
                 value={answer}
-                onChangeText={setAnswer}
+                onChangeText={(text) => {
+                  // Manual edits make it a typed answer — no homologation
+                  answerSpokenRef.current = false;
+                  setAnswer(text);
+                }}
                 onSubmit={handleSubmit}
                 micAvailable={micAvailable}
                 listening={listening}

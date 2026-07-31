@@ -33,7 +33,7 @@ interface PhraseListsContextValue {
   refresh: () => Promise<void>;
   createList: (name: string, nativeLanguage: string, targetLanguage: string) => Promise<PhraseList>;
   deleteList: (id: string) => Promise<void>;
-  addPhrase: (listId: string, nativeSentence: string, acceptedTranslations: string[]) => Promise<void>;
+  addPhrase: (listId: string, nativeSentence: string, acceptedTranslations: string[], properNouns?: string[]) => Promise<void>;
   updatePhrase: (listId: string, phraseId: string, updates: Partial<Pick<Phrase, "nativeSentence" | "acceptedTranslations">>) => Promise<void>;
   deletePhrase: (listId: string, phraseId: string) => Promise<void>;
   /** Persist a per-list practice preference (doesn't touch updatedAt) */
@@ -85,6 +85,7 @@ export function PhraseListsProvider({ children }: { children: React.ReactNode })
                 id: generateId(),
                 nativeSentence: p.nativeSentence,
                 acceptedTranslations: p.acceptedTranslations,
+                ...(p.properNouns?.length ? { properNouns: p.properNouns } : {}),
               })),
               createdAt: now,
               updatedAt: now,
@@ -129,7 +130,12 @@ export function PhraseListsProvider({ children }: { children: React.ReactNode })
   );
 
   const addPhrase = useCallback(
-    async (listId: string, nativeSentence: string, acceptedTranslations: string[]) => {
+    async (
+      listId: string,
+      nativeSentence: string,
+      acceptedTranslations: string[],
+      properNouns?: string[]
+    ) => {
       const list = await storage.getListById(listId);
       if (!list) return;
 
@@ -137,6 +143,7 @@ export function PhraseListsProvider({ children }: { children: React.ReactNode })
         id: generateId(),
         nativeSentence,
         acceptedTranslations,
+        ...(properNouns?.length ? { properNouns } : {}),
       };
 
       list.phrases.push(phrase);

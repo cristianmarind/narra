@@ -29,11 +29,15 @@ import { useServices } from "@/services";
  *   "targetLanguage": "en",
  *   "phrases": [
  *     {
- *       "nativeSentence": "Hola",
- *       "acceptedTranslations": ["Hello", "Hi"]
+ *       "nativeSentence": "María vive en Bogotá",
+ *       "acceptedTranslations": ["María lives in Bogotá"],
+ *       "properNouns": ["María", "Bogotá"]
  *     }
  *   ]
  * }
+ *
+ * `properNouns` is optional: names and Spanish words that speech recognition
+ * can't transcribe faithfully — spoken practice always accepts them.
  */
 interface ImportedList {
   name: string;
@@ -42,6 +46,7 @@ interface ImportedList {
   phrases: {
     nativeSentence: string;
     acceptedTranslations: string[];
+    properNouns?: string[];
   }[];
 }
 
@@ -61,7 +66,11 @@ function validateImportedData(data: unknown): data is ImportedList {
       phrase.nativeSentence.trim() !== "" &&
       Array.isArray(phrase.acceptedTranslations) &&
       phrase.acceptedTranslations.length > 0 &&
-      phrase.acceptedTranslations.every((t: unknown) => typeof t === "string" && (t as string).trim() !== "")
+      phrase.acceptedTranslations.every((t: unknown) => typeof t === "string" && (t as string).trim() !== "") &&
+      // Optional; when present it must be an array of non-empty strings
+      (phrase.properNouns === undefined ||
+        (Array.isArray(phrase.properNouns) &&
+          phrase.properNouns.every((n: unknown) => typeof n === "string" && (n as string).trim() !== "")))
     );
   });
 }
@@ -81,7 +90,7 @@ export default function ImportListScreen() {
       const list = await createList(data.name, data.nativeLanguage, data.targetLanguage);
 
       for (const phrase of data.phrases) {
-        await addPhrase(list.id, phrase.nativeSentence, phrase.acceptedTranslations);
+        await addPhrase(list.id, phrase.nativeSentence, phrase.acceptedTranslations, phrase.properNouns);
       }
 
       // Show success message briefly

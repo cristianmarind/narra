@@ -15,6 +15,13 @@ export interface Phrase {
   id: string;
   nativeSentence: string;
   acceptedTranslations: string[];
+  /**
+   * Words within the translations that speech recognition can't be expected
+   * to transcribe faithfully (Spanish names, brands, proper nouns). Spoken
+   * validation always accepts them, and they're fed to the recognizer as
+   * contextual biasing strings on platforms that support it.
+   */
+  properNouns?: string[];
   /** User-added translations during practice sessions */
   userTranslations?: AcceptedTranslation[];
   /** Per-phrase accuracy stats */
@@ -181,11 +188,20 @@ export interface SpeechService {
   getEngineStatuses?(): { english: VoiceEngineStatus; spanish: VoiceEngineStatus };
 }
 
+export interface SpeechRecognitionOptions {
+  /**
+   * Words/phrases the recognizer should prioritize (expected vocabulary,
+   * proper nouns, voice commands). Honored by native recognizers (iOS
+   * contextualStrings, Android 13+ biasing strings); ignored on web.
+   */
+  contextualStrings?: string[];
+}
+
 export interface SpeechRecognitionService {
   /** Request microphone/recognition permissions. Returns true if granted. */
   requestPermissions(): Promise<boolean>;
   /** Start listening for speech in the given language (e.g. "en", "es"). */
-  start(language: string): void;
+  start(language: string, options?: SpeechRecognitionOptions): void;
   /** Stop listening and finalize the result. */
   stop(): void;
   /** Abort listening without finalizing. */

@@ -13,6 +13,8 @@ export interface DefaultListDef {
   phrases: {
     nativeSentence: string;
     acceptedTranslations: string[];
+    /** Names/Spanish words the recognizer can't transcribe faithfully; always accepted */
+    properNouns?: string[];
   }[];
 }
 

@@ -9,8 +9,8 @@ interface UseSpeechRecognitionReturn {
   transcript: string;
   /** Whether speech recognition is available on this platform */
   available: boolean;
-  /** Start listening for speech */
-  listen: (language: string) => Promise<void>;
+  /** Start listening for speech, optionally biasing toward expected words */
+  listen: (language: string, contextualStrings?: string[]) => Promise<void>;
   /** Stop listening and finalize result */
   stop: () => void;
   /** Clear the current transcript */
@@ -55,14 +55,14 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
   });
 
   const listen = useCallback(
-    async (language: string) => {
+    async (language: string, contextualStrings?: string[]) => {
       const granted = await speechRecognition.requestPermissions();
       if (!granted) {
         console.warn("Speech recognition permission not granted");
         return;
       }
       setTranscript("");
-      speechRecognition.start(language);
+      speechRecognition.start(language, { contextualStrings });
     },
     [speechRecognition]
   );

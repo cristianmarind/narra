@@ -1,5 +1,5 @@
 export { generateId } from "./id";
-export { validateAnswer } from "./validation";
+export { validateAnswer, validateSpokenAnswer, homologateSpokenAnswer } from "./validation";
 export { confirm } from "./confirm";
 export { playBeep } from "./beep";
 export { getListStats } from "./stats";
