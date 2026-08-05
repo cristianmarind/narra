@@ -147,6 +147,29 @@ export interface AdsService {
   }): Promise<SessionAd | null>;
 }
 
+/**
+ * Full-screen AdMob ads (interstitial / rewarded), separate from the
+ * sponsored-phrase AdsService. Policy: at most one automatic ad every 2 days,
+ * shown when the user finishes or leaves their first practice of that window,
+ * plus voluntary ads the user opts into to support the app.
+ */
+export interface FullscreenAdsService {
+  /** False on web and when the native module isn't present (e.g. Expo Go). */
+  isAvailable: boolean;
+  /**
+   * Show the scheduled interstitial if the 2-day cooldown has elapsed and an
+   * ad is loaded. Resolves true only when an ad was actually shown. Never
+   * throws and never blocks navigation.
+   */
+  maybeShowSessionAd(): Promise<boolean>;
+  /**
+   * User-initiated rewarded ad ("watch an ad to support the app"). Resolves
+   * true when the ad was watched. Also resets the 2-day cooldown — the user
+   * already contributed.
+   */
+  showSupportAd(): Promise<boolean>;
+}
+
 /** Load status of a neural voice, as shown in Settings. */
 export type VoiceEngineStatus = "idle" | "loading" | "ready" | "failed";
 

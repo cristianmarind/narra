@@ -7,7 +7,7 @@ import { useAppTheme } from "@/hooks/use-app-theme";
 import { useTtsSpeed } from "@/hooks/use-tts-speed";
 import { useUserLevel } from "@/hooks/use-user-level";
 import { useServices } from "@/services";
-import type { VoiceEngineStatus } from "@/types";
+import type { ProficiencyLevel, VoiceEngineStatus } from "@/types";
 import { PROFICIENCY_LABELS, PROFICIENCY_LEVELS } from "@/types";
 
 const SPEED_OPTIONS = [
@@ -112,16 +112,7 @@ export function SettingsPanel() {
         <ThemedText type="small" themeColor="textSecondary">
           Mi nivel
         </ThemedText>
-        <View style={styles.optionsRow}>
-          {PROFICIENCY_LEVELS.map((value) => (
-            <OptionButton
-              key={value}
-              label={PROFICIENCY_LABELS[value]}
-              active={level === value}
-              onPress={() => setLevel(value)}
-            />
-          ))}
-        </View>
+        <LevelSelector level={level} onChange={setLevel} />
         <ThemedText
           type="small"
           style={[styles.hint, { color: colors.textMuted }]}
@@ -150,6 +141,68 @@ function VoiceStatusRow({ label, status }: { label: string; status: VoiceEngineS
       <ThemedText type="small" style={{ color: STATUS_COLOR[status], fontWeight: "600" }}>
         {STATUS_LABEL[status]}
       </ThemedText>
+    </View>
+  );
+}
+
+/**
+ * Dropdown for "Mi nivel": the option grid used for the other settings makes
+ * "Principiante" wrap onto a second line in its column. A selector avoids
+ * that — each option gets the panel's full width when the list is open.
+ */
+function LevelSelector({
+  level,
+  onChange,
+}: {
+  level: ProficiencyLevel;
+  onChange: (level: ProficiencyLevel) => void;
+}) {
+  const { colors } = useAppTheme();
+  const [open, setOpen] = useState(false);
+
+  return (
+    <View>
+      <Pressable
+        onPress={() => setOpen((o) => !o)}
+        style={({ pressed }) => [
+          styles.selector,
+          { borderColor: colors.border },
+          pressed && styles.pressed,
+        ]}
+      >
+        <ThemedText style={styles.selectorValue}>
+          {PROFICIENCY_LABELS[level]}
+        </ThemedText>
+        <ThemedText style={{ color: colors.textMuted }}>{open ? "▲" : "▼"}</ThemedText>
+      </Pressable>
+
+      {open && (
+        <View
+          style={[
+            styles.selectorMenu,
+            { borderColor: colors.border, backgroundColor: colors.surface },
+          ]}
+        >
+          {PROFICIENCY_LEVELS.map((value) => {
+            const active = value === level;
+            return (
+              <Pressable
+                key={value}
+                onPress={() => {
+                  onChange(value);
+                  setOpen(false);
+                }}
+                style={({ pressed }) => [styles.selectorOption, pressed && styles.pressed]}
+              >
+                <ThemedText style={active && styles.selectorOptionActiveText}>
+                  {PROFICIENCY_LABELS[value]}
+                </ThemedText>
+                {active && <ThemedText style={{ color: Brand.accent }}>✓</ThemedText>}
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
     </View>
   );
 }
@@ -229,6 +282,36 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingVertical: Spacing.one,
+  },
+  selector: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+  },
+  selectorValue: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  selectorMenu: {
+    marginTop: Spacing.one,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    overflow: "hidden",
+  },
+  selectorOption: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.three,
+  },
+  selectorOptionActiveText: {
+    color: Brand.accent,
+    fontWeight: "600",
   },
   pressed: {
     opacity: 0.7,

@@ -7,6 +7,8 @@ import { Brand, Layout, Radius, Spacing } from "@/constants/theme";
 interface AppSidebarProps {
   /** Opens the settings modal */
   onOpenSettings: () => void;
+  /** Opens the ads-policy modal ("anuncios que no molestan") */
+  onOpenAdsInfo?: () => void;
   /** Called after any navigation, so the mobile drawer can close itself */
   onNavigate?: () => void;
 }
@@ -18,7 +20,7 @@ interface AppSidebarProps {
  * and inside a slide-over drawer below that. Keeping one implementation means the
  * two never drift apart.
  */
-export function AppSidebar({ onOpenSettings, onNavigate }: AppSidebarProps) {
+export function AppSidebar({ onOpenSettings, onOpenAdsInfo, onNavigate }: AppSidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
 
@@ -58,6 +60,17 @@ export function AppSidebar({ onOpenSettings, onNavigate }: AppSidebarProps) {
             onNavigate?.();
           }}
         />
+        {onOpenAdsInfo && (
+          <NavItem
+            icon="♡"
+            label="Apoyar Narra"
+            active={false}
+            onPress={() => {
+              onOpenAdsInfo();
+              onNavigate?.();
+            }}
+          />
+        )}
       </View>
 
       <View style={styles.footer}>

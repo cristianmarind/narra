@@ -7,19 +7,24 @@ interface NavDrawerProps {
   visible: boolean;
   onClose: () => void;
   onOpenSettings: () => void;
+  onOpenAdsInfo?: () => void;
 }
 
 /**
  * Mobile-only slide-over that hosts the sidebar.
  * On `md` and up the sidebar is rendered persistently instead and this is unused.
  */
-export function NavDrawer({ visible, onClose, onOpenSettings }: NavDrawerProps) {
+export function NavDrawer({ visible, onClose, onOpenSettings, onOpenAdsInfo }: NavDrawerProps) {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.overlay} onPress={onClose} accessibilityLabel="Cerrar menú">
         {/* Swallow presses inside the panel so they don't dismiss the drawer */}
         <Pressable style={styles.panel} onPress={(e) => e.stopPropagation()}>
-          <AppSidebar onOpenSettings={onOpenSettings} onNavigate={onClose} />
+          <AppSidebar
+            onOpenSettings={onOpenSettings}
+            onOpenAdsInfo={onOpenAdsInfo}
+            onNavigate={onClose}
+          />
         </Pressable>
       </Pressable>
     </Modal>

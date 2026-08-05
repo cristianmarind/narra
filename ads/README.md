@@ -59,3 +59,29 @@ su nivel de dificultad.
 2. Push a `master` — Cloudflare Pages redepliega automáticamente.
 3. Si el cambio debe ser inmediato, purgar la caché desde el dashboard de
    Cloudflare; si no, se propaga al expirar el TTL.
+
+## Anuncios a pantalla completa (AdMob)
+
+Aparte de las frases patrocinadas, la app móvil usa AdMob
+(`react-native-google-mobile-ads`) con una política poco intrusiva
+(`client/src/services/fullscreen-ads/`):
+
+- **Interstitial automático**: como máximo uno cada 2 días, y solo al terminar
+  o salir de la primera práctica de esa ventana. Nunca en medio de una sesión,
+  y nunca en la primera práctica tras instalar la app.
+- **Rewarded voluntario**: el usuario puede ver un anuncio cuando quiera para
+  apoyar la app ("Apoyar Narra" en el menú, el botón 💚 del header o el enlace
+  en resultados). Verlo reinicia el contador de 2 días.
+- En web no hay anuncios de AdMob (solo frases patrocinadas).
+
+Configuración: los App IDs van en `client/app.json` (plugin
+`react-native-google-mobile-ads` — **hoy tienen los IDs de prueba de Google;
+reemplazar por los reales antes de publicar**) y los unit IDs en
+`client/.env` (`EXPO_PUBLIC_ADMOB_INTERSTITIAL_ID`,
+`EXPO_PUBLIC_ADMOB_REWARDED_ID`). En builds de desarrollo siempre se usan los
+TestIds de Google.
+
+> **Nota de versiones**: `react-native-google-mobile-ads` está fijado en
+> 16.0.3. Desde la 16.1.0 arrastra `play-services-ads` ≥ 25.x, compilado con
+> Kotlin 2.3 — incompatible con el Kotlin de Expo SDK 57 / RN 0.86 (falla
+> `compileDebugKotlin`). No subir hasta actualizar Expo/RN.

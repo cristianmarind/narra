@@ -1,10 +1,12 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Brand, Spacing } from "@/constants/theme";
+import { useServices } from "@/services";
 
 export default function ResultsScreen() {
   const { id, correct, incorrect, total, percentage } = useLocalSearchParams<{
@@ -15,6 +17,21 @@ export default function ResultsScreen() {
     percentage: string;
   }>();
   const router = useRouter();
+  const { fullscreenAds } = useServices();
+  const [supportState, setSupportState] = useState<"idle" | "loading" | "thanks">("idle");
+
+  // Session finished: the scheduled interstitial's moment (at most one every
+  // 2 days — the service enforces the cooldown, so this is usually a no-op)
+  useEffect(() => {
+    void fullscreenAds.maybeShowSessionAd();
+  }, [fullscreenAds]);
+
+  async function handleSupport() {
+    if (supportState !== "idle") return;
+    setSupportState("loading");
+    const watched = await fullscreenAds.showSupportAd();
+    setSupportState(watched ? "thanks" : "idle");
+  }
 
   const pct = Number(percentage) || 0;
   const emoji = pct === 100 ? "🎉" : pct >= 70 ? "👏" : pct >= 50 ? "💪" : "📚";
@@ -52,6 +69,21 @@ export default function ResultsScreen() {
         </View>
 
         <View style={styles.actions}>
+          {fullscreenAds.isAvailable && (
+            <Pressable
+              onPress={handleSupport}
+              disabled={supportState !== "idle"}
+              style={({ pressed }) => [styles.supportLink, pressed && styles.pressed]}
+            >
+              <ThemedText type="small" themeColor="textSecondary" style={styles.supportText}>
+                {supportState === "thanks"
+                  ? "💚 ¡Gracias por apoyar a Narra!"
+                  : supportState === "loading"
+                    ? "Cargando anuncio..."
+                    : "💚 Apoya Narra viendo un anuncio (opcional)"}
+              </ThemedText>
+            </Pressable>
+          )}
           <Pressable
             onPress={() => router.replace(`/list/${id}/practice`)}
             style={({ pressed }) => [
@@ -126,6 +158,13 @@ const styles = StyleSheet.create({
   },
   actions: {
     gap: Spacing.two,
+  },
+  supportLink: {
+    alignItems: "center",
+    paddingVertical: Spacing.one,
+  },
+  supportText: {
+    textDecorationLine: "underline",
   },
   button: {
     padding: Spacing.three,

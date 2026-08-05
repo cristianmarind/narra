@@ -13,3 +13,4 @@ export * from "./speech";
 export * from "./recognition";
 export * from "./storage";
 export * from "./ads";
+export * from "./fullscreen-ads";

@@ -125,7 +125,7 @@ export default function PracticeScreen() {
   const voiceMode = voiceModeParam === "1";
 
   const { lists, addUserTranslation, recordPhraseResult } = usePhraseLists();
-  const { speech, ads } = useServices();
+  const { speech, ads, fullscreenAds } = useServices();
   const { level: userLevel } = useUserLevel();
   const { colors } = useAppTheme();
   const router = useRouter();
@@ -618,6 +618,9 @@ export default function PracticeScreen() {
     cancelSpeech();
     stopTimer();
     if (listening) stopListening();
+    // Fire-and-forget: the interstitial (at most one every 2 days) overlays
+    // natively, so it doesn't need to block the navigation below
+    void fullscreenAds.maybeShowSessionAd();
     // Detail is already underneath practice on the stack — pop back to it
     // instead of pushing a duplicate instance (which made the real one
     // underneath look like it "refreshed" on the next back press).

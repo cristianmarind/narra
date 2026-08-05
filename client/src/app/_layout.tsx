@@ -4,6 +4,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
+import { AdsInfoModal } from "@/components/ads-info-modal";
 import { AppSidebar } from "@/components/app-sidebar";
 import { NarraLogo } from "@/components/narra-logo";
 import { NavDrawer } from "@/components/nav-drawer";
@@ -19,6 +20,30 @@ import { ServicesProvider } from "@/services";
 
 SplashScreen.preventAutoHideAsync();
 
+/** Rotating notices shown under the loading message, explaining the ads policy. */
+const ADS_LOADING_NOTICES = [
+  "Narra se mantiene con anuncios poco intrusivos",
+  "Verás máximo un anuncio cada 2 días, solo al terminar tu práctica",
+  "Nunca te interrumpimos en medio de una sesión",
+  "Tú decides si quieres ver un anuncio extra para apoyar la app 💚",
+];
+
+function AdsLoadingNotice() {
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(
+      () => setIndex((i) => (i + 1) % ADS_LOADING_NOTICES.length),
+      3500,
+    );
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <Text style={styles.loadingNotice}>{ADS_LOADING_NOTICES[index]}</Text>
+  );
+}
+
 function RootLayoutInner() {
   const { mode, colors } = useAppTheme();
   const { isCompact } = useBreakpoint();
@@ -26,6 +51,7 @@ function RootLayoutInner() {
   const router = useRouter();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [adsInfoOpen, setAdsInfoOpen] = useState(false);
 
   // Leaving the compact layout would strand the drawer open behind the sidebar
   useEffect(() => {
@@ -44,11 +70,28 @@ function RootLayoutInner() {
     </Pressable>
   );
 
+  // Compact-header shortcut to the ads-policy explanation ("anuncios que no
+  // molestan"); on wide layouts the same entry lives in the sidebar
+  const adsInfoButton = () => (
+    <Pressable
+      onPress={() => setAdsInfoOpen(true)}
+      accessibilityLabel="Cómo funcionan los anuncios en Narra"
+      style={({ pressed }) => [styles.adsPill, pressed && styles.pressed]}
+    >
+      <Text style={styles.adsPillText}>💚 Sin spam</Text>
+    </Pressable>
+  );
+
   return (
     <ThemeProvider value={mode === "dark" ? DarkTheme : DefaultTheme}>
       <View style={[styles.shell, { backgroundColor: colors.background }]}>
         {/* Persistent navigation from `md` up; below that it lives in the drawer */}
-        {!isCompact && <AppSidebar onOpenSettings={() => setSettingsOpen(true)} />}
+        {!isCompact && (
+          <AppSidebar
+            onOpenSettings={() => setSettingsOpen(true)}
+            onOpenAdsInfo={() => setAdsInfoOpen(true)}
+          />
+        )}
 
         <View style={styles.main}>
           <Stack
@@ -58,6 +101,7 @@ function RootLayoutInner() {
               // top of that would be a second, redundant title bar.
               headerShown: isCompact,
               headerLeft: menuButton,
+              headerRight: adsInfoButton,
               headerStyle: { backgroundColor: Brand.primary },
               headerTintColor: Brand.onPrimary,
               headerTitleStyle: { color: Brand.onPrimary },
@@ -104,6 +148,7 @@ function RootLayoutInner() {
           <View style={styles.loadingContent}>
             <NarraLogo size={76} color={Brand.onPrimary} variant="dark" />
             <Text style={styles.loadingText}>{loadingMessage}</Text>
+            <AdsLoadingNotice />
           </View>
         </View>
       )}
@@ -112,8 +157,10 @@ function RootLayoutInner() {
         visible={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         onOpenSettings={() => setSettingsOpen(true)}
+        onOpenAdsInfo={() => setAdsInfoOpen(true)}
       />
       <SettingsModal visible={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <AdsInfoModal visible={adsInfoOpen} onClose={() => setAdsInfoOpen(false)} />
     </ThemeProvider>
   );
 }
@@ -152,6 +199,18 @@ const styles = StyleSheet.create({
     fontSize: 22,
     color: Brand.onPrimary,
   },
+  adsPill: {
+    marginRight: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: "rgba(255,255,255,0.15)",
+  },
+  adsPillText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: Brand.onPrimary,
+  },
   pressed: {
     opacity: 0.6,
   },
@@ -174,5 +233,13 @@ const styles = StyleSheet.create({
     color: Brand.accentSoft,
     fontSize: 14,
     fontWeight: "500",
+  },
+  loadingNotice: {
+    color: "rgba(255,255,255,0.55)",
+    fontSize: 12,
+    textAlign: "center",
+    paddingHorizontal: 32,
+    // Notices vary in length; reserving two lines keeps the logo from jumping
+    minHeight: 32,
   },
 });
