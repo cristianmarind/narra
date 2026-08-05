@@ -371,6 +371,9 @@ export default function PracticeScreen() {
         currentPhrase.acceptedTranslations,
         currentPhrase.properNouns
       );
+      console.log(
+        `[Practice] transcripción: "${spoken}" -> homologado: "${homologated}"`
+      );
       if (homologated !== spoken) {
         answerRef.current = homologated;
         setAnswer(homologated);
@@ -533,6 +536,9 @@ export default function PracticeScreen() {
       stopListening();
     }
     const result = submitAnswer(answerText);
+    console.log(
+      `[Practice] "${currentPhrase.nativeSentence}" -> ${answerSpokenRef.current ? "voz" : "texto"}: "${answerText}" | esperado: ${JSON.stringify(currentPhrase.acceptedTranslations)} | ${result.isCorrect ? "CORRECTO" : "INCORRECTO"}`
+    );
     setLastResult(result);
     answerSpokenRef.current = false;
     setAnswer("");

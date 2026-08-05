@@ -130,6 +130,99 @@ interface Segment {
 }
 
 /**
+ * Groups of English words that sound identical or near-identical when
+ * spoken. Edit-distance similarity (below) misses these on purpose — it
+ * compares spelling, and short homophones like "I"/"eye"/"aye" share almost
+ * no letters despite sounding the same. Keyed by the EXPECTED word, so a
+ * substitution only ever applies when the correct translation actually
+ * contains that word — never as a blanket "these sound alike" rule.
+ */
+const HOMOPHONE_GROUPS: string[][] = [
+  ["i", "aye", "eye"],
+  ["you", "ewe", "u"],
+  ["to", "too", "two"],
+  ["for", "four", "fore"],
+  ["be", "bee"],
+  ["see", "sea", "si"],
+  ["no", "know"],
+  ["write", "right", "rite"],
+  ["there", "their", "theyre"],
+  ["hear", "here"],
+  ["buy", "by", "bye"],
+  ["one", "won"],
+  ["some", "sum"],
+  ["flower", "flour"],
+  ["new", "knew"],
+  ["ate", "eight"],
+  ["night", "knight"],
+  ["weak", "week"],
+  ["meat", "meet"],
+  ["son", "sun"],
+  ["great", "grate"],
+  ["plain", "plane"],
+  ["rose", "rows"],
+  ["pair", "pear", "pare"],
+  ["steal", "steel"],
+  ["peace", "piece"],
+  ["blue", "blew"],
+  ["would", "wood"],
+  ["our", "hour"],
+  ["allowed", "aloud"],
+  ["board", "bored"],
+  ["break", "brake"],
+  ["cell", "sell"],
+  ["cent", "scent", "sent"],
+  ["die", "dye"],
+  ["fair", "fare"],
+  ["flee", "flea"],
+  ["flew", "flu", "flue"],
+  ["hair", "hare"],
+  ["heal", "heel"],
+  ["him", "hymn"],
+  ["hole", "whole"],
+  ["made", "maid"],
+  ["mail", "male"],
+  ["pause", "paws"],
+  ["peak", "peek", "pique"],
+  ["rain", "reign", "rein"],
+  ["road", "rode", "rowed"],
+  ["role", "roll"],
+  ["sail", "sale"],
+  ["scene", "seen"],
+  ["soar", "sore"],
+  ["stair", "stare"],
+  ["suite", "sweet"],
+  ["tail", "tale"],
+  ["vain", "vein", "vane"],
+  ["waist", "waste"],
+  ["wait", "weight"],
+  ["ware", "wear", "where"],
+  ["way", "weigh"],
+  ["weather", "whether"],
+  ["which", "witch"],
+];
+
+/** expected word -> its homophones, built once from HOMOPHONE_GROUPS */
+const HOMOPHONES: Map<string, Set<string>> = (() => {
+  const map = new Map<string, Set<string>>();
+  for (const group of HOMOPHONE_GROUPS) {
+    for (const word of group) {
+      const others = map.get(word) ?? new Set<string>();
+      for (const candidate of group) {
+        if (candidate !== word) others.add(candidate);
+      }
+      map.set(word, others);
+    }
+  }
+  return map;
+})();
+
+/** True when `actual` is either identical to `expected` or a known homophone of it */
+function tokensMatch(expected: string, actual: string): boolean {
+  return expected === actual || (HOMOPHONES.get(expected)?.has(actual) ?? false);
+}
+
+/**
  * Align two token sequences on their longest common subsequence (the anchor
  * words), returning anchors and the mismatched spans left between them.
  */
@@ -140,7 +233,7 @@ function alignTokens(expected: string[], actual: string[]): Segment[] {
   for (let i = n - 1; i >= 0; i--) {
     for (let j = m - 1; j >= 0; j--) {
       lcs[i][j] =
-        expected[i] === actual[j]
+        tokensMatch(expected[i], actual[j])
           ? lcs[i + 1][j + 1] + 1
           : Math.max(lcs[i + 1][j], lcs[i][j + 1]);
     }
@@ -164,7 +257,7 @@ function alignTokens(expected: string[], actual: string[]): Segment[] {
   };
 
   while (i < n && j < m) {
-    if (expected[i] === actual[j]) {
+    if (tokensMatch(expected[i], actual[j])) {
       flushSpan();
       segments.push({
         matched: true,

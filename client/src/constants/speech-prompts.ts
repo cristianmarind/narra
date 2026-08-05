@@ -7,11 +7,17 @@
  * All of them are spoken in the user's native language.
  */
 
-/** Spoken as feedback when the answer is right, followed by the correct answer */
-export const FEEDBACK_CORRECT = "Correcto, se dice:";
+/**
+ * Spoken as feedback when the answer is right, followed by the correct answer.
+ *
+ * The two feedback phrases are deliberately phonetically distinct: they used
+ * to differ only in the weak initial syllable ("Correcto…"/"Incorrecto…"),
+ * and any clipped playback start made a wrong answer sound like a right one.
+ */
+export const FEEDBACK_CORRECT = "¡Muy bien! Se dice:";
 
 /** Spoken as feedback when the answer is wrong, followed by the correct answer */
-export const FEEDBACK_INCORRECT = "Incorrecto, se dice:";
+export const FEEDBACK_INCORRECT = "Respuesta incorrecta. Se dice:";
 
 /**
  * Spanish names for target languages, used in the spoken intro.

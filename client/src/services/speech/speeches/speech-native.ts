@@ -58,6 +58,43 @@ const VOICE_ENGINE: Record<string, string> = {
   "kokoro-es": "kokoro_es",
 };
 
+/**
+ * A fallback speak() call that never resolves would wedge the whole
+ * speak()/speakPinned() call (and isSpeakingNow) forever. Bound it — this is
+ * a last resort, not the common case; ExpoSpeech normally resolves quickly.
+ */
+const FALLBACK_TIMEOUT_MS = 10_000;
+
+function boundedFallbackSpeak(text: string, language: string, rate: number): Promise<void> {
+  return new Promise<void>((resolve) => {
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      resolve();
+    };
+
+    const timer = setTimeout(finish, FALLBACK_TIMEOUT_MS);
+
+    ExpoSpeech.speak(text, {
+      language: toDeviceLocale(language),
+      rate: Math.min(Math.max(rate, 0.5), 2),
+      onDone: () => {
+        clearTimeout(timer);
+        finish();
+      },
+      onStopped: () => {
+        clearTimeout(timer);
+        finish();
+      },
+      onError: () => {
+        clearTimeout(timer);
+        finish();
+      },
+    });
+  });
+}
+
 export function isNeuralNativeAvailable(): boolean {
   return isExecuTorchAvailable() && isNativeAudioPlayerAvailable();
 }
@@ -78,16 +115,7 @@ export function createNeuralNativeSpeechService(
     player: createNativeAudioPlayer(),
     // Unlike the plain expo-speech service, the fallback honors the rate so it
     // mirrors web-fallback's behavior (pinned messages still speak at 1.0)
-    fallbackSpeak: (text, language, rate) =>
-      new Promise<void>((resolve) => {
-        ExpoSpeech.speak(text, {
-          language: toDeviceLocale(language),
-          rate: Math.min(Math.max(rate, 0.5), 2),
-          onDone: () => resolve(),
-          onStopped: () => resolve(),
-          onError: () => resolve(),
-        });
-      }),
+    fallbackSpeak: boundedFallbackSpeak,
     fallbackStop: () => ExpoSpeech.stop(),
     statusEngines: { english: "kokoro_en", spanish: "kokoro_es" },
     getSpeed,
@@ -96,6 +124,15 @@ export function createNeuralNativeSpeechService(
   // Mirror web's eager policy: preload English up front (it's the practice
   // target language), let Spanish load on first use
   setTimeout(() => engines.kokoro_en.preload(), 0);
+
+  // The system TTS engine (our fallback) binds to a background service on
+  // first use, which has been observed to take 40+ seconds on some devices —
+  // long enough to make an interactive request that falls back look hung.
+  // Prime that connection now, silently, so it's already warm by the time a
+  // real fallback is needed.
+  setTimeout(() => {
+    ExpoSpeech.speak(".", { volume: 0, onDone: () => {}, onError: () => {} });
+  }, 0);
 
   return core;
 }

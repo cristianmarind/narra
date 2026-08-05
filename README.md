@@ -90,6 +90,36 @@ npm install
 npm run web        # o: npm run android / npm run ios
 ```
 
+### Probar en un dispositivo Android físico
+
+Sin cable, por WiFi (Android 11+):
+
+1. En el teléfono: Ajustes → Opciones de desarrollador → activa **Depuración
+   inalámbrica**.
+2. Toca "Emparejar dispositivo con código de emparejamiento" — anota la IP:puerto y el
+   código de 6 dígitos que aparecen (expiran rápido, úsalos de inmediato).
+3. Empareja una sola vez:
+   ```bash
+   adb pair <ip>:<puerto-emparejamiento> <código>
+   ```
+4. En la pantalla principal de "Depuración inalámbrica" (no la de emparejar), toma la
+   IP:puerto de **conexión** y conecta:
+   ```bash
+   adb connect <ip>:<puerto-conexión>
+   ```
+5. Desde `client/`, compila e instala (primera vez, o si cambió una dependencia nativa):
+   ```bash
+   npx expo run:android
+   ```
+   Para correr después sin recompilar (día a día, con la app ya instalada):
+   ```bash
+   npm run android
+   ```
+
+El puerto de conexión cambia cada vez que se reinicia la pantalla de depuración
+inalámbrica o se reconecta el WiFi — si `adb connect` falla, vuelve a los Ajustes del
+teléfono por una IP:puerto nuevos y repite el paso 4.
+
 ### Notas de desarrollo con Docker
 
 En Windows el file watcher de Metro no ve los cambios a través de los volúmenes montados.
