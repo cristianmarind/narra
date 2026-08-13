@@ -75,14 +75,15 @@ export function useAudioWarmup(lists: PhraseList[], loading: boolean): string | 
 
     (async () => {
       for (const [language, { texts, labels }] of byLang) {
-        await speech.pregeneratePersistent!(texts, language, (current, total, text, status) => {
+        await speech.pregeneratePersistent!(texts, language, (current, total, _text, status) => {
           const label = labels[current - 1];
           if (status === "generating") {
             setWarmupStatus(`Generando audio: "${label}" (${current}/${total})`);
-          } else if (status === "checking") {
-            setWarmupStatus(`Verificando cache: "${label}" (${current}/${total})`);
           }
-          // Don't show anything for "cached" — it's instant
+          // Don't show anything for "checking"/"cached" — the store lookup
+          // that decides between them is what's actually running, and on a
+          // cache hit (the common case after the first app open) it's fast
+          // enough that flashing a banner for it is just noise.
         });
       }
       setWarmupStatus(null);

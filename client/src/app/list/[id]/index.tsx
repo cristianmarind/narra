@@ -29,6 +29,16 @@ export default function ListDetailScreen() {
   const { colors } = useAppTheme();
   const router = useRouter();
   const [list, setList] = useState<PhraseList | null>(null);
+  // "listen" (default): audio-only, no typing/STT — the user hears the phrase,
+  // thinks their answer, then hears the correct one. "manual": the classic
+  // type-or-speak-the-answer flow.
+  const [mode, setMode] = useState<"listen" | "manual">("listen");
+  // Listen mode only: after the correct answer plays, wait for the user to
+  // self-report whether they got it right instead of just moving on.
+  const [selfVerify, setSelfVerify] = useState(false);
+  // Manual mode: drives the full hands-free STT flow. Listen mode: only used
+  // (when selfVerify is on) to let the user say the verify result instead of
+  // tapping a button.
   const [voiceMode, setVoiceMode] = useState(false);
   const [randomOrder, setRandomOrder] = useState(false);
   // Fixed the moment random mode is switched on, so the practice screen plays
@@ -105,7 +115,9 @@ export default function ListDetailScreen() {
 
     const order =
       randomOrder && shuffledOrder ? `&order=${shuffledOrder.map((p) => p.id).join(",")}` : "";
-    router.push(`/list/${id}/practice?voiceMode=${voiceMode ? "1" : "0"}${order}`);
+    router.push(
+      `/list/${id}/practice?mode=${mode}&voiceMode=${voiceMode ? "1" : "0"}&selfVerify=${selfVerify ? "1" : "0"}${order}`
+    );
   }
 
   if (!list) {
@@ -204,26 +216,8 @@ export default function ListDetailScreen() {
                   <Text style={styles.secondaryButtonText}>Editar frases</Text>
                 </Pressable>
 
-                <Pressable
-                  onPress={() => setVoiceMode(!voiceMode)}
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ checked: voiceMode }}
-                  style={({ pressed }) => [styles.voiceToggle, pressed && styles.pressed]}
-                >
-                  <View
-                    style={[
-                      styles.checkbox,
-                      { borderColor: Brand.accent },
-                      voiceMode && styles.checkboxActive,
-                    ]}
-                  >
-                    {voiceMode && <Text style={styles.checkmark}>✓</Text>}
-                  </View>
-                  <Text style={[styles.voiceToggleText, { color: colors.textSecondary }]}>
-                    Modo voz (manos libres)
-                  </Text>
-                </Pressable>
-
+                {/* General options — apply no matter which practice mode is
+                    selected below, so they live outside modeSection. */}
                 <Pressable
                   onPress={handleToggleRandom}
                   accessibilityRole="checkbox"
@@ -244,7 +238,7 @@ export default function ListDetailScreen() {
                   </Text>
                 </Pressable>
 
-                {/* Persisted on the list itself, unlike the per-session toggles above */}
+                {/* Persisted on the list itself, unlike the per-session toggles below */}
                 <Pressable
                   onPress={() =>
                     setListPreference(list.id, { showTranslation: !list.showTranslation })
@@ -266,6 +260,134 @@ export default function ListDetailScreen() {
                     Mostrar traducción correcta
                   </Text>
                 </Pressable>
+
+                <View style={styles.modeSection}>
+                  <Text style={[styles.modeLabel, { color: colors.textMuted }]}>
+                    Modo de práctica
+                  </Text>
+
+                  <Pressable
+                    onPress={() => setMode("listen")}
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: mode === "listen" }}
+                    style={({ pressed }) => [
+                      styles.modeOption,
+                      { borderColor: colors.border },
+                      mode === "listen" && styles.modeOptionActive,
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <Text style={[styles.modeOptionTitle, { color: colors.text }]}>
+                      🎧 Escuchar y repetir
+                    </Text>
+                    <Text style={[styles.modeOptionHint, { color: colors.textMuted }]}>
+                      Sin escribir ni hablar: escuchas la frase, piensas tu respuesta y luego
+                      escuchas la traducción correcta.
+                    </Text>
+                  </Pressable>
+
+                  {mode === "listen" && (
+                    <>
+                      <Pressable
+                        onPress={() => setSelfVerify(!selfVerify)}
+                        accessibilityRole="checkbox"
+                        accessibilityState={{ checked: selfVerify }}
+                        style={({ pressed }) => [
+                          styles.voiceToggle,
+                          styles.nestedOption,
+                          pressed && styles.pressed,
+                        ]}
+                      >
+                        <View
+                          style={[
+                            styles.checkbox,
+                            { borderColor: Brand.accent },
+                            selfVerify && styles.checkboxActive,
+                          ]}
+                        >
+                          {selfVerify && <Text style={styles.checkmark}>✓</Text>}
+                        </View>
+                        <Text style={[styles.voiceToggleText, { color: colors.textSecondary }]}>
+                          Verificar cada respuesta (tienes 10s tras cada frase)
+                        </Text>
+                      </Pressable>
+
+                      {/* Nested directly under the option it depends on, instead of
+                          sharing a spot below with manual mode's own voice toggle —
+                          that made it unclear which mode it belonged to. */}
+                      {selfVerify && (
+                        <Pressable
+                          onPress={() => setVoiceMode(!voiceMode)}
+                          accessibilityRole="checkbox"
+                          accessibilityState={{ checked: voiceMode }}
+                          style={({ pressed }) => [
+                            styles.voiceToggle,
+                            styles.nestedOptionDeep,
+                            pressed && styles.pressed,
+                          ]}
+                        >
+                          <View
+                            style={[
+                              styles.checkbox,
+                              { borderColor: Brand.accent },
+                              voiceMode && styles.checkboxActive,
+                            ]}
+                          >
+                            {voiceMode && <Text style={styles.checkmark}>✓</Text>}
+                          </View>
+                          <Text style={[styles.voiceToggleText, { color: colors.textSecondary }]}>
+                            Verificar con la voz (di "bien" o "malo")
+                          </Text>
+                        </Pressable>
+                      )}
+                    </>
+                  )}
+
+                  <Pressable
+                    onPress={() => setMode("manual")}
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: mode === "manual" }}
+                    style={({ pressed }) => [
+                      styles.modeOption,
+                      { borderColor: colors.border },
+                      mode === "manual" && styles.modeOptionActive,
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <Text style={[styles.modeOptionTitle, { color: colors.text }]}>
+                      ⌨️ Escribir o hablar respuesta
+                    </Text>
+                    <Text style={[styles.modeOptionHint, { color: colors.textMuted }]}>
+                      Modo clásico: escribe la traducción o actívala con reconocimiento de voz.
+                    </Text>
+                  </Pressable>
+
+                  {mode === "manual" && (
+                    <Pressable
+                      onPress={() => setVoiceMode(!voiceMode)}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked: voiceMode }}
+                      style={({ pressed }) => [
+                        styles.voiceToggle,
+                        styles.nestedOption,
+                        pressed && styles.pressed,
+                      ]}
+                    >
+                      <View
+                        style={[
+                          styles.checkbox,
+                          { borderColor: Brand.accent },
+                          voiceMode && styles.checkboxActive,
+                        ]}
+                      >
+                        {voiceMode && <Text style={styles.checkmark}>✓</Text>}
+                      </View>
+                      <Text style={[styles.voiceToggleText, { color: colors.textSecondary }]}>
+                        Modo voz (manos libres)
+                      </Text>
+                    </Pressable>
+                  )}
+                </View>
 
                 <View style={[styles.dangerZone, { borderTopColor: colors.borderSubtle }]}>
                   <Pressable
@@ -366,6 +488,40 @@ const styles = StyleSheet.create({
     color: Brand.accent,
     fontSize: 14,
     fontWeight: "600",
+  },
+  modeSection: {
+    gap: Spacing.two,
+    marginTop: Spacing.two,
+  },
+  modeLabel: {
+    fontSize: 11,
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  modeOption: {
+    padding: Spacing.three,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    gap: 2,
+  },
+  modeOptionActive: {
+    borderColor: Brand.accent,
+    borderWidth: 2,
+  },
+  modeOptionTitle: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  modeOptionHint: {
+    fontSize: 11,
+    lineHeight: 15,
+  },
+  nestedOption: {
+    marginLeft: Spacing.three,
+  },
+  nestedOptionDeep: {
+    marginLeft: Spacing.four,
   },
   voiceToggle: {
     flexDirection: "row",

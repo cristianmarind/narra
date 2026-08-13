@@ -120,6 +120,10 @@ El puerto de conexión cambia cada vez que se reinicia la pantalla de depuració
 inalámbrica o se reconecta el WiFi — si `adb connect` falla, vuelve a los Ajustes del
 teléfono por una IP:puerto nuevos y repite el paso 4.
 
+### Generar APK
+cd d:\Proyectos\ingles-app\client\android
+.\gradlew assembleRelease
+
 ### Notas de desarrollo con Docker
 
 En Windows el file watcher de Metro no ve los cambios a través de los volúmenes montados.

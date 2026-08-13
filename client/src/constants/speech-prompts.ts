@@ -20,6 +20,17 @@ export const FEEDBACK_CORRECT = "¡Muy bien! Se dice:";
 export const FEEDBACK_INCORRECT = "Respuesta incorrecta. Se dice:";
 
 /**
+ * Listen mode + self-verify + voice: spoken right before listening for the
+ * user's spoken grade. "Bien"/"malo" replace "correcto"/"incorrecto" here for
+ * the same reason as the feedback phrases above — they're phonetically far
+ * apart, so a clipped recognition can't turn one into the other.
+ */
+export const VERIFY_PROMPT_FIRST = "Califica tu respuesta, di BIEN o MALO";
+
+/** Same prompt, shortened after the user has already heard the full version once */
+export const VERIFY_PROMPT_REPEAT = "Califica";
+
+/**
  * Spanish names for target languages, used in the spoken intro.
  * Lowercase on purpose: TTS engines tend to spell out uppercase words.
  */
@@ -47,5 +58,11 @@ export function buildIntro(targetLanguage: string): string {
  * The intro varies with the target language; the rest are constant.
  */
 export function fixedPromptsFor(targetLanguage: string): string[] {
-  return [FEEDBACK_CORRECT, FEEDBACK_INCORRECT, buildIntro(targetLanguage)];
+  return [
+    FEEDBACK_CORRECT,
+    FEEDBACK_INCORRECT,
+    VERIFY_PROMPT_FIRST,
+    VERIFY_PROMPT_REPEAT,
+    buildIntro(targetLanguage),
+  ];
 }

@@ -13,6 +13,8 @@ interface UsePracticeSessionReturn {
   score: { correct: number; incorrect: number; percentage: number };
   start: (listId: string, phrases: Phrase[]) => void;
   submitAnswer: (answer: string) => PhraseResult;
+  /** Record a result the user graded themselves (listen mode), skipping text validation */
+  submitSelfGraded: (isCorrect: boolean) => PhraseResult;
   /** Override the last result for a given phraseId as correct */
   overrideAsCorrect: (phraseId: string) => void;
   next: () => void;
@@ -90,6 +92,29 @@ export function usePracticeSession(): UsePracticeSessionReturn {
     [session, currentPhrase]
   );
 
+  /** Listen mode: the user reports the result themselves, so there's no text to validate */
+  const submitSelfGraded = useCallback(
+    (isCorrect: boolean): PhraseResult => {
+      if (!session || !currentPhrase) {
+        throw new Error("No active session or phrase");
+      }
+
+      const result: PhraseResult = {
+        phraseId: currentPhrase.id,
+        userAnswer: "",
+        isCorrect,
+      };
+
+      setSession((prev) => {
+        if (!prev) return prev;
+        return { ...prev, results: [...prev.results, result] };
+      });
+
+      return result;
+    },
+    [session, currentPhrase]
+  );
+
   const overrideAsCorrect = useCallback((phraseId: string) => {
     setSession((prev) => {
       if (!prev) return prev;
@@ -133,6 +158,7 @@ export function usePracticeSession(): UsePracticeSessionReturn {
     score,
     start,
     submitAnswer,
+    submitSelfGraded,
     overrideAsCorrect,
     next,
     reset,

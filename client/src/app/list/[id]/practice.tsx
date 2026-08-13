@@ -22,6 +22,8 @@ import { Brand, Layout, Radius, Spacing } from "@/constants/theme";
 import {
   FEEDBACK_CORRECT,
   FEEDBACK_INCORRECT,
+  VERIFY_PROMPT_FIRST,
+  VERIFY_PROMPT_REPEAT,
   buildIntro,
   fixedPromptsFor,
   languageName,
@@ -41,6 +43,28 @@ const TIMER_INCORRECT_SECONDS = 15;
 
 /** Max phrases warmed ahead of the current one, per language, at any time */
 const WINDOW_SIZE = 5;
+
+/**
+ * Listen mode: thinking pause before the correct answer plays, sized to the
+ * expected answer's length. A flat per-word rate made longer phrases drag
+ * (2s/word was 10s for a 5-word answer) — only the first word gets the full
+ * beat, the rest add a shorter one.
+ */
+const THINK_SECONDS_FIRST_WORD = 2;
+const THINK_SECONDS_PER_EXTRA_WORD = 1;
+
+/** Listen mode + self-verify: how long to wait for the user to grade themselves */
+const VERIFY_SECONDS = 10;
+
+/**
+ * Words recognized while waiting for a spoken self-verify result. Was
+ * "correcto"/"incorrecto" — a near-minimal pair that a weak recognized
+ * prefix could flip into the other. "Bien"/"malo" don't share that risk.
+ * Each side also biases toward a couple of close variants — a meaning
+ * synonym and a phonetic near-miss — since the recognizer only picks among
+ * this list, and covering likely mishears here beats narrowing the list.
+ */
+const VERIFY_CONTEXT = ["bien", "bueno", "ven", "malo", "mal", "cal"];
 
 /**
  * Reorder phrases to match an explicit id sequence (from the list-detail
@@ -103,6 +127,17 @@ function insertSessionAd(phrases: Phrase[], ad: SessionAd): Phrase[] {
  */
 type VoicePhase = "answer" | "pre-command" | "post-command" | null;
 
+/**
+ * Listen mode phases (audio-only, no typing/STT for the answer itself):
+ * - "thinking": pause after the native phrase, for the user to produce their
+ *   answer mentally or aloud, before the correct one plays
+ * - "answer-playing": the correct answer is being read
+ * - "verifying": self-verify only — waiting (up to VERIFY_SECONDS) for the
+ *   user to grade themselves via button or spoken "bien"/"malo"
+ * - null: not in a listen phase (manual mode, or between phrases)
+ */
+type ListenStage = "thinking" | "answer-playing" | "verifying" | null;
+
 /** Recognizer biasing for command phases: the only words we expect to hear */
 const COMMAND_CONTEXT = [
   "verify",
@@ -116,13 +151,25 @@ const COMMAND_CONTEXT = [
 ];
 
 export default function PracticeScreen() {
-  const { id, voiceMode: voiceModeParam, order: orderParam } = useLocalSearchParams<{
+  const {
+    id,
+    mode: modeParam,
+    voiceMode: voiceModeParam,
+    selfVerify: selfVerifyParam,
+    order: orderParam,
+  } = useLocalSearchParams<{
     id: string;
+    /** "listen" (default, audio-only) or "manual" (type/speak the answer) */
+    mode?: string;
     voiceMode?: string;
+    /** Listen mode only: wait for the user to self-report the result */
+    selfVerify?: string;
     /** Comma-separated phrase ids, fixing the exact play order (set by the list screen's random toggle) */
     order?: string;
   }>();
+  const isListenMode = modeParam !== "manual";
   const voiceMode = voiceModeParam === "1";
+  const selfVerify = isListenMode && selfVerifyParam === "1";
 
   const { lists, addUserTranslation, recordPhraseResult } = usePhraseLists();
   const { speech, ads, fullscreenAds } = useServices();
@@ -145,6 +192,7 @@ export default function PracticeScreen() {
     score,
     start,
     submitAnswer,
+    submitSelfGraded,
     overrideAsCorrect,
     next,
   } = usePracticeSession();
@@ -164,6 +212,11 @@ export default function PracticeScreen() {
   // Voice mode state
   const [voicePhase, setVoicePhase] = useState<VoicePhase>(null);
   const voicePhaseRef = useRef<VoicePhase>(null);
+
+  // Listen mode state: "thinking" (pause before the answer plays), "answer-playing"
+  // (correct answer being read), "verifying" (self-verify has taken over waiting)
+  const [listenStage, setListenStage] = useState<ListenStage>(null);
+  const listenStageRef = useRef<ListenStage>(null);
   const answerRef = useRef("");
   // True while the answer field holds a transcript (vs typed text). Spoken
   // answers get homologated when listening ends; typed ones never do.
@@ -171,6 +224,10 @@ export default function PracticeScreen() {
 
   // The intro is spoken only before the first phrase of the session
   const introSpokenRef = useRef(false);
+
+  // The full "di BIEN o MALO" prompt is spoken only the first time voice
+  // self-verify kicks in; later phrases just get the short "Califica"
+  const verifyPromptSpokenRef = useRef(false);
 
   // Bumped when the user advances or leaves; speech chains capture the value
   // at their start and bail if it changed, so stopping the current utterance
@@ -194,6 +251,9 @@ export default function PracticeScreen() {
   useEffect(() => {
     answerRef.current = answer;
   }, [answer]);
+  useEffect(() => {
+    listenStageRef.current = listenStage;
+  }, [listenStage]);
 
   // Find the list and start session
   useEffect(() => {
@@ -263,8 +323,9 @@ export default function PracticeScreen() {
     }
   }, [progress.current]);
 
-  // Auto-speak the native sentence when phrase changes, then activate voice mode.
-  // On the very first phrase, an intro is read before it.
+  // Auto-speak the native sentence when phrase changes, then activate voice mode
+  // (manual mode) or the thinking pause (listen mode). On the very first
+  // phrase, an intro is read before it.
   useEffect(() => {
     if (currentPhrase && list && status === "active" && !lastResult) {
       // Stop listening before TTS speaks to avoid capturing the app's own voice
@@ -272,6 +333,7 @@ export default function PracticeScreen() {
         stopListening();
       }
       setVoicePhase(null);
+      setListenStage(null);
 
       const withIntro = !introSpokenRef.current;
       introSpokenRef.current = true;
@@ -285,7 +347,9 @@ export default function PracticeScreen() {
         await speak(currentPhrase.nativeSentence, list.nativeLanguage);
       })().then(() => {
         if (speechEpochRef.current !== epoch) return;
-        if (voiceMode) {
+        if (isListenMode) {
+          startThinkingPause();
+        } else if (voiceMode) {
           startVoicePhase("answer");
         }
       });
@@ -299,7 +363,25 @@ export default function PracticeScreen() {
     const phase = voicePhaseRef.current;
     const normalized = transcript.toLowerCase().trim();
 
-    if (phase === "answer") {
+    if (isListenMode && listenStageRef.current === "verifying") {
+      if (
+        normalized.includes("malo") ||
+        normalized.includes("mal") ||
+        normalized.includes("cal")
+      ) {
+        clearTranscript();
+        if (listening) stopListening();
+        finishListenPhrase(false);
+      } else if (
+        normalized.includes("bien") ||
+        normalized.includes("bueno") ||
+        normalized.includes("ven")
+      ) {
+        clearTranscript();
+        if (listening) stopListening();
+        finishListenPhrase(true);
+      }
+    } else if (phase === "answer") {
       // Just capture into the answer field
       answerSpokenRef.current = true;
       setAnswer(transcript);
@@ -380,6 +462,21 @@ export default function PracticeScreen() {
       }
     };
 
+    if (isListenMode) {
+      // Listen mode never uses the typed/spoken answer field — only the
+      // verify step (if enabled) listens, and only to grade the phrase
+      if (listenStageRef.current === "verifying" && voiceMode) {
+        const timeout = setTimeout(() => {
+          if (listenStageRef.current === "verifying") {
+            clearTranscript();
+            listen("en", VERIFY_CONTEXT);
+          }
+        }, 500);
+        return () => clearTimeout(timeout);
+      }
+      return;
+    }
+
     if (!voiceMode) {
       // Manual mic: give the final result event a beat to land, then homologate
       const timeout = setTimeout(homologateAnswer, 300);
@@ -449,6 +546,70 @@ export default function PracticeScreen() {
     }, 400);
   }
 
+  /** Listen mode: pause after the native phrase so the user can produce their
+   * own answer (mentally or aloud — not tracked), sized to the expected answer. */
+  function startThinkingPause() {
+    if (!isFocusedRef.current || !currentPhrase) return;
+    const target = currentPhrase.acceptedTranslations[0] ?? "";
+    const wordCount = Math.max(1, target.trim().split(/\s+/).filter(Boolean).length);
+    setListenStage("thinking");
+    startTimer(THINK_SECONDS_FIRST_WORD + (wordCount - 1) * THINK_SECONDS_PER_EXTRA_WORD);
+  }
+
+  /** Listen mode: speak the correct answer, then either wait for self-verify or move on */
+  function playCorrectAnswerThenContinue() {
+    if (!isFocusedRef.current || !currentPhrase || !list) return;
+    setListenStage("answer-playing");
+    const epoch = speechEpochRef.current;
+    speak(currentPhrase.acceptedTranslations[0], list.targetLanguage).then(() => {
+      if (speechEpochRef.current !== epoch || !isFocusedRef.current) return;
+      if (selfVerify) {
+        startVerifyWait();
+      } else {
+        finishListenPhrase(null);
+      }
+    });
+  }
+
+  /** Listen mode + self-verify: wait up to VERIFY_SECONDS for a button tap or spoken result */
+  function startVerifyWait() {
+    if (!isFocusedRef.current || !list) return;
+    setListenStage("verifying");
+    startTimer(VERIFY_SECONDS);
+    if (voiceMode) {
+      const epoch = speechEpochRef.current;
+      const prompt = verifyPromptSpokenRef.current ? VERIFY_PROMPT_REPEAT : VERIFY_PROMPT_FIRST;
+      verifyPromptSpokenRef.current = true;
+      // Speak the grading prompt, then the same "your turn" beep used
+      // elsewhere, before opening the mic — otherwise the user has no cue
+      // that it's time to say "bien" or "malo".
+      speakFixed(prompt, list.nativeLanguage).then(() => {
+        if (speechEpochRef.current !== epoch || !isFocusedRef.current) return;
+        if (listenStageRef.current !== "verifying") return;
+        playBeep(600, 100);
+        setTimeout(() => {
+          if (isFocusedRef.current && listenStageRef.current === "verifying") {
+            clearTranscript();
+            listen("en", VERIFY_CONTEXT);
+          }
+        }, 400);
+      });
+    }
+  }
+
+  /** Listen mode: record the self-graded result (if any) and advance. `isCorrect`
+   * is null when self-verify is off, or the verify window timed out unanswered —
+   * the phrase is practiced but not scored, like a sponsored phrase. */
+  function finishListenPhrase(isCorrect: boolean | null) {
+    if (listening) stopListening();
+    setListenStage(null);
+    if (isCorrect !== null && currentPhrase && list && !currentPhrase.sponsoredBy) {
+      submitSelfGraded(isCorrect);
+      recordPhraseResult(list.id, currentPhrase.id, isCorrect);
+    }
+    handleNext();
+  }
+
   // Navigate to results when completed
   useEffect(() => {
     if (status === "completed") {
@@ -479,9 +640,20 @@ export default function PracticeScreen() {
   }
 
   useEffect(() => {
-    if (countdown === 0 && lastResult) {
+    if (countdown !== 0) return;
+    if (lastResult) {
       stopTimer();
       handleNext();
+      return;
+    }
+    if (listenStage === "thinking") {
+      stopTimer();
+      playCorrectAnswerThenContinue();
+    } else if (listenStage === "verifying") {
+      stopTimer();
+      if (listening) stopListening();
+      // Timed out without a self-report: nothing to record, just move on
+      finishListenPhrase(null);
     }
   }, [countdown]);
 
@@ -499,6 +671,7 @@ export default function PracticeScreen() {
         speech.stop();
         stopListening();
         setVoicePhase(null);
+        setListenStage(null);
         clearTranscript();
       };
     }, [speech, stopListening, clearTranscript])
@@ -577,6 +750,7 @@ export default function PracticeScreen() {
     setCountdown(null);
     setLastResult(null);
     setVoicePhase(null);
+    setListenStage(null);
     clearTranscript();
     answerSpokenRef.current = false;
     setAnswer("");
@@ -657,13 +831,25 @@ export default function PracticeScreen() {
           </Pressable>
         </View>
 
-        {voiceMode && (
+        {!isListenMode && voiceMode && (
           <View style={styles.voiceIndicator}>
             <Text style={styles.voiceIndicatorText}>
               🎙️ Modo voz
               {voicePhase === "answer" && " · Escuchando respuesta..."}
               {voicePhase === "pre-command" && ' · Di: "verify" o "repeat"'}
               {voicePhase === "post-command" && ' · Di: "next", "repeat" o "stop"'}
+            </Text>
+          </View>
+        )}
+
+        {isListenMode && (
+          <View style={styles.voiceIndicator}>
+            <Text style={styles.voiceIndicatorText}>
+              🎧 Modo escucha
+              {listenStage === "thinking" && ` · Piensa tu respuesta... ${countdown ?? ""}s`}
+              {listenStage === "answer-playing" && " · Reproduciendo respuesta correcta..."}
+              {listenStage === "verifying" &&
+                ` · ¿Lo hiciste bien?${voiceMode ? ' (di "bien" o "malo")' : ""} ${countdown ?? ""}s`}
             </Text>
           </View>
         )}
@@ -704,12 +890,25 @@ export default function PracticeScreen() {
             <ThemedText style={styles.phrase}>{currentPhrase?.nativeSentence}</ThemedText>
 
             {/* Learning mode: the expected answer stays visible while typing.
-                Hidden once feedback is up — it already shows the answer. */}
-            {list.showTranslation && currentPhrase && !lastResult && (
+                Hidden once feedback is up — it already shows the answer.
+                Listen mode has its own reveal below instead. */}
+            {!isListenMode && list.showTranslation && currentPhrase && !lastResult && (
               <Text style={[styles.revealedTranslation, { color: colors.textSecondary }]}>
                 💡 {currentPhrase.acceptedTranslations[0]}
               </Text>
             )}
+
+            {/* Listen mode: show the correct translation as text for as long as
+                it's being read/graded — from the moment it starts playing until
+                the phrase advances, not before (so it doesn't spoil the "think
+                of your own answer" pause). */}
+            {isListenMode &&
+              (listenStage === "answer-playing" || listenStage === "verifying") &&
+              currentPhrase && (
+                <Text style={[styles.revealedTranslation, { color: colors.textSecondary }]}>
+                  💡 {currentPhrase.acceptedTranslations[0]}
+                </Text>
+              )}
 
             <Pressable
               onPress={handleReplay}
@@ -728,7 +927,32 @@ export default function PracticeScreen() {
           </View>
 
           <View style={styles.footer}>
-            {lastResult && currentPhrase ? (
+            {isListenMode ? (
+              listenStage === "verifying" && selfVerify ? (
+                <View style={styles.verifyRow}>
+                  <Pressable
+                    onPress={() => finishListenPhrase(true)}
+                    style={({ pressed }) => [
+                      styles.verifyButton,
+                      styles.verifyCorrect,
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <Text style={styles.verifyButtonText}>✓ Lo hice bien</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => finishListenPhrase(false)}
+                    style={({ pressed }) => [
+                      styles.verifyButton,
+                      styles.verifyIncorrect,
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <Text style={styles.verifyButtonText}>✗ Lo hice mal</Text>
+                  </Pressable>
+                </View>
+              ) : null
+            ) : lastResult && currentPhrase ? (
               <>
                 <PracticeFeedback
                   result={lastResult}
@@ -903,6 +1127,27 @@ const styles = StyleSheet.create({
     backgroundColor: Brand.accent,
   },
   nextButtonText: {
+    color: Brand.onPrimary,
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  verifyRow: {
+    flexDirection: "row",
+    gap: Spacing.two,
+  },
+  verifyButton: {
+    flex: 1,
+    paddingVertical: Spacing.three,
+    borderRadius: Radius.lg,
+    alignItems: "center",
+  },
+  verifyCorrect: {
+    backgroundColor: Brand.success,
+  },
+  verifyIncorrect: {
+    backgroundColor: Brand.error,
+  },
+  verifyButtonText: {
     color: Brand.onPrimary,
     fontSize: 14,
     fontWeight: "600",
