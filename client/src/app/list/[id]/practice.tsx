@@ -33,6 +33,7 @@ import { usePracticeSession } from "@/hooks/use-practice-session";
 import { useSpeech } from "@/hooks/use-speech";
 import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useThinkTime } from "@/hooks/use-think-time";
 import { useUserLevel } from "@/hooks/use-user-level";
 import { useServices } from "@/services";
 import type { Phrase, PhraseList, PhraseResult, SessionAd } from "@/types";
@@ -43,15 +44,6 @@ const TIMER_INCORRECT_SECONDS = 15;
 
 /** Max phrases warmed ahead of the current one, per language, at any time */
 const WINDOW_SIZE = 5;
-
-/**
- * Listen mode: thinking pause before the correct answer plays, sized to the
- * expected answer's length. A flat per-word rate made longer phrases drag
- * (2s/word was 10s for a 5-word answer) — only the first word gets the full
- * beat, the rest add a shorter one.
- */
-const THINK_SECONDS_FIRST_WORD = 2;
-const THINK_SECONDS_PER_EXTRA_WORD = 1;
 
 /** Listen mode + self-verify: how long to wait for the user to grade themselves */
 const VERIFY_SECONDS = 10;
@@ -174,6 +166,8 @@ export default function PracticeScreen() {
   const { lists, addUserTranslation, recordPhraseResult } = usePhraseLists();
   const { speech, ads, fullscreenAds } = useServices();
   const { level: userLevel } = useUserLevel();
+  const { firstWordSeconds: thinkFirstWordSeconds, perExtraWordSeconds: thinkPerExtraWordSeconds } =
+    useThinkTime();
   const { colors } = useAppTheme();
   const router = useRouter();
   const { speak, speakFixed, speaking, stop: stopSpeaking } = useSpeech();
@@ -195,6 +189,7 @@ export default function PracticeScreen() {
     submitSelfGraded,
     overrideAsCorrect,
     next,
+    previous,
   } = usePracticeSession();
 
   const [answer, setAnswer] = useState("");
@@ -239,6 +234,13 @@ export default function PracticeScreen() {
   // focus — every activation path checks this first
   const isFocusedRef = useRef(true);
 
+  // Manual pause, available in every mode. Every automatic activation path
+  // (TTS chains, timers, mic re-activation) checks this the same way it
+  // checks isFocusedRef, so pausing mid-flight actually halts things instead
+  // of just hiding them.
+  const [paused, setPaused] = useState(false);
+  const isPausedRef = useRef(false);
+
   function cancelSpeech() {
     speechEpochRef.current++;
     stopSpeaking();
@@ -254,6 +256,9 @@ export default function PracticeScreen() {
   useEffect(() => {
     listenStageRef.current = listenStage;
   }, [listenStage]);
+  // isPausedRef is set directly (not via effect) in handlePause/handleResume:
+  // handleResume calls functions that check it synchronously, before a
+  // state-driven effect would have run.
 
   // Find the list and start session
   useEffect(() => {
@@ -323,36 +328,42 @@ export default function PracticeScreen() {
     }
   }, [progress.current]);
 
-  // Auto-speak the native sentence when phrase changes, then activate voice mode
-  // (manual mode) or the thinking pause (listen mode). On the very first
-  // phrase, an intro is read before it.
+  // Auto-speak the native sentence, then activate voice mode (manual mode) or
+  // the thinking pause (listen mode). On the very first phrase, an intro is
+  // read before it. Pulled out of the effect below so Resume can replay it
+  // without waiting for currentPhrase/status to change.
+  function presentCurrentPhrase() {
+    if (!currentPhrase || !list) return;
+    // Stop listening before TTS speaks to avoid capturing the app's own voice
+    if (listening) {
+      stopListening();
+    }
+    setVoicePhase(null);
+    setListenStage(null);
+
+    const withIntro = !introSpokenRef.current;
+    introSpokenRef.current = true;
+
+    const epoch = speechEpochRef.current;
+    (async () => {
+      if (withIntro) {
+        await speakFixed(buildIntro(list.targetLanguage), list.nativeLanguage);
+      }
+      if (speechEpochRef.current !== epoch) return;
+      await speak(currentPhrase.nativeSentence, list.nativeLanguage);
+    })().then(() => {
+      if (speechEpochRef.current !== epoch || isPausedRef.current) return;
+      if (isListenMode) {
+        startThinkingPause();
+      } else if (voiceMode) {
+        startVoicePhase("answer");
+      }
+    });
+  }
+
   useEffect(() => {
     if (currentPhrase && list && status === "active" && !lastResult) {
-      // Stop listening before TTS speaks to avoid capturing the app's own voice
-      if (listening) {
-        stopListening();
-      }
-      setVoicePhase(null);
-      setListenStage(null);
-
-      const withIntro = !introSpokenRef.current;
-      introSpokenRef.current = true;
-
-      const epoch = speechEpochRef.current;
-      (async () => {
-        if (withIntro) {
-          await speakFixed(buildIntro(list.targetLanguage), list.nativeLanguage);
-        }
-        if (speechEpochRef.current !== epoch) return;
-        await speak(currentPhrase.nativeSentence, list.nativeLanguage);
-      })().then(() => {
-        if (speechEpochRef.current !== epoch) return;
-        if (isListenMode) {
-          startThinkingPause();
-        } else if (voiceMode) {
-          startVoicePhase("answer");
-        }
-      });
+      presentCurrentPhrase();
     }
   }, [currentPhrase?.id, status]);
 
@@ -441,6 +452,9 @@ export default function PracticeScreen() {
   // mic based on the current phase
   useEffect(() => {
     if (listening) return;
+    // Paused: don't homologate or re-activate the mic. Resume replays the
+    // current stage from scratch instead of continuing this one.
+    if (isPausedRef.current) return;
 
     // Replace misheard-but-close spans (and proper nouns) with the expected
     // wording, visibly, in the answer field. Typed text is never touched.
@@ -514,8 +528,8 @@ export default function PracticeScreen() {
   }, [listening]);
 
   function startVoicePhase(phase: VoicePhase) {
-    // Never reopen the mic on a screen the user already left
-    if (!isFocusedRef.current) return;
+    // Never reopen the mic on a screen the user already left, or while paused
+    if (!isFocusedRef.current || isPausedRef.current) return;
     if (!list || speaking) {
       // If still speaking, retry after a short delay
       if (speaking) {
@@ -542,27 +556,27 @@ export default function PracticeScreen() {
     // Delay to avoid catching leftover audio or TTS echo; the guard covers a
     // blur happening inside that delay
     setTimeout(() => {
-      if (isFocusedRef.current) listen(listenLang, context);
+      if (isFocusedRef.current && !isPausedRef.current) listen(listenLang, context);
     }, 400);
   }
 
   /** Listen mode: pause after the native phrase so the user can produce their
    * own answer (mentally or aloud — not tracked), sized to the expected answer. */
   function startThinkingPause() {
-    if (!isFocusedRef.current || !currentPhrase) return;
+    if (!isFocusedRef.current || isPausedRef.current || !currentPhrase) return;
     const target = currentPhrase.acceptedTranslations[0] ?? "";
     const wordCount = Math.max(1, target.trim().split(/\s+/).filter(Boolean).length);
     setListenStage("thinking");
-    startTimer(THINK_SECONDS_FIRST_WORD + (wordCount - 1) * THINK_SECONDS_PER_EXTRA_WORD);
+    startTimer(thinkFirstWordSeconds + (wordCount - 1) * thinkPerExtraWordSeconds);
   }
 
   /** Listen mode: speak the correct answer, then either wait for self-verify or move on */
   function playCorrectAnswerThenContinue() {
-    if (!isFocusedRef.current || !currentPhrase || !list) return;
+    if (!isFocusedRef.current || isPausedRef.current || !currentPhrase || !list) return;
     setListenStage("answer-playing");
     const epoch = speechEpochRef.current;
     speak(currentPhrase.acceptedTranslations[0], list.targetLanguage).then(() => {
-      if (speechEpochRef.current !== epoch || !isFocusedRef.current) return;
+      if (speechEpochRef.current !== epoch || !isFocusedRef.current || isPausedRef.current) return;
       if (selfVerify) {
         startVerifyWait();
       } else {
@@ -573,7 +587,7 @@ export default function PracticeScreen() {
 
   /** Listen mode + self-verify: wait up to VERIFY_SECONDS for a button tap or spoken result */
   function startVerifyWait() {
-    if (!isFocusedRef.current || !list) return;
+    if (!isFocusedRef.current || isPausedRef.current || !list) return;
     setListenStage("verifying");
     startTimer(VERIFY_SECONDS);
     if (voiceMode) {
@@ -584,11 +598,11 @@ export default function PracticeScreen() {
       // elsewhere, before opening the mic — otherwise the user has no cue
       // that it's time to say "bien" or "malo".
       speakFixed(prompt, list.nativeLanguage).then(() => {
-        if (speechEpochRef.current !== epoch || !isFocusedRef.current) return;
+        if (speechEpochRef.current !== epoch || !isFocusedRef.current || isPausedRef.current) return;
         if (listenStageRef.current !== "verifying") return;
         playBeep(600, 100);
         setTimeout(() => {
-          if (isFocusedRef.current && listenStageRef.current === "verifying") {
+          if (isFocusedRef.current && !isPausedRef.current && listenStageRef.current === "verifying") {
             clearTranscript();
             listen("en", VERIFY_CONTEXT);
           }
@@ -620,16 +634,18 @@ export default function PracticeScreen() {
     }
   }, [status]);
 
-  // Timer logic
+  // Timer logic. Ticks every 100ms (not 1000ms) so sub-second durations —
+  // the thinking pause can be configured down to fractions of a second —
+  // fire close to on time instead of waiting for the next whole second.
+  // Display still rounds up to whole seconds.
   const startTimer = useCallback((seconds: number) => {
     stopTimer();
-    setCountdown(seconds);
+    const endAt = Date.now() + seconds * 1000;
+    setCountdown(Math.ceil(seconds));
     timerRef.current = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev === null || prev <= 1) return 0;
-        return prev - 1;
-      });
-    }, 1000);
+      const remainingMs = endAt - Date.now();
+      setCountdown(remainingMs <= 0 ? 0 : Math.ceil(remainingMs / 1000));
+    }, 100);
   }, []);
 
   function stopTimer() {
@@ -754,7 +770,75 @@ export default function PracticeScreen() {
     clearTranscript();
     answerSpokenRef.current = false;
     setAnswer("");
+    if (listening) stopListening();
+    // Manually advancing always resumes normal playback for the phrase it lands on
+    isPausedRef.current = false;
+    setPaused(false);
     next();
+  }
+
+  /** Goes back to the previous phrase. Re-answering it replaces its earlier
+   * result (see usePracticeSession) instead of double-counting the score. */
+  function handlePrevious() {
+    if (progress.current <= 1) return;
+    cancelSpeech();
+    stopTimer();
+    setCountdown(null);
+    setLastResult(null);
+    setVoicePhase(null);
+    setListenStage(null);
+    clearTranscript();
+    answerSpokenRef.current = false;
+    setAnswer("");
+    if (listening) stopListening();
+    isPausedRef.current = false;
+    setPaused(false);
+    previous();
+  }
+
+  /** Freezes audio, timers and the mic. Available in every mode. */
+  function handlePause() {
+    if (isPausedRef.current) return;
+    isPausedRef.current = true;
+    setPaused(true);
+    cancelSpeech();
+    stopTimer();
+    if (listening) stopListening();
+  }
+
+  /**
+   * Resumes from wherever pausing left off. Rather than trying to restore an
+   * exact mid-utterance/mid-countdown position, it replays the current
+   * stage's audio and restarts its timer from the top.
+   */
+  function handleResume() {
+    isPausedRef.current = false;
+    setPaused(false);
+
+    if (lastResult) {
+      startTimer(lastResult.isCorrect ? TIMER_CORRECT_SECONDS : TIMER_INCORRECT_SECONDS);
+      if (voiceMode) startVoicePhase("post-command");
+      return;
+    }
+
+    if (isListenMode) {
+      const stage = listenStageRef.current;
+      if (stage === "thinking") startThinkingPause();
+      else if (stage === "answer-playing") playCorrectAnswerThenContinue();
+      else if (stage === "verifying") startVerifyWait();
+      else presentCurrentPhrase();
+      return;
+    }
+
+    if (voiceMode) {
+      const phase = voicePhaseRef.current;
+      if (phase === "answer" || phase === "pre-command" || phase === "post-command") {
+        startVoicePhase(phase);
+      } else {
+        presentCurrentPhrase();
+      }
+    }
+    // Plain manual mode (no voice): nothing auto-driven to resume — typing continues as-is
   }
 
   async function handleAddAsCorrect() {
@@ -831,13 +915,59 @@ export default function PracticeScreen() {
           </Pressable>
         </View>
 
+        {/* Transport controls: available in every mode, regardless of stage */}
+        <View style={styles.controlsRow}>
+          <Pressable
+            onPress={handlePrevious}
+            disabled={progress.current <= 1}
+            accessibilityLabel="Frase anterior"
+            style={({ pressed }) => [
+              styles.controlButton,
+              { backgroundColor: colors.surfaceMuted },
+              pressed && styles.pressed,
+              progress.current <= 1 && styles.disabled,
+            ]}
+          >
+            <Text style={[styles.controlButtonText, { color: colors.textSecondary }]}>
+              ⏮ Anterior
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={paused ? handleResume : handlePause}
+            accessibilityLabel={paused ? "Reanudar" : "Pausar"}
+            style={({ pressed }) => [
+              styles.controlButton,
+              { backgroundColor: colors.surfaceMuted },
+              pressed && styles.pressed,
+            ]}
+          >
+            <Text style={[styles.controlButtonText, { color: colors.textSecondary }]}>
+              {paused ? "▶ Reanudar" : "⏸ Pausar"}
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={handleNext}
+            accessibilityLabel="Siguiente frase"
+            style={({ pressed }) => [
+              styles.controlButton,
+              { backgroundColor: colors.surfaceMuted },
+              pressed && styles.pressed,
+            ]}
+          >
+            <Text style={[styles.controlButtonText, { color: colors.textSecondary }]}>
+              Siguiente ⏭
+            </Text>
+          </Pressable>
+        </View>
+
         {!isListenMode && voiceMode && (
           <View style={styles.voiceIndicator}>
             <Text style={styles.voiceIndicatorText}>
               🎙️ Modo voz
-              {voicePhase === "answer" && " · Escuchando respuesta..."}
-              {voicePhase === "pre-command" && ' · Di: "verify" o "repeat"'}
-              {voicePhase === "post-command" && ' · Di: "next", "repeat" o "stop"'}
+              {paused && " · ⏸ Pausado"}
+              {!paused && voicePhase === "answer" && " · Escuchando respuesta..."}
+              {!paused && voicePhase === "pre-command" && ' · Di: "verify" o "repeat"'}
+              {!paused && voicePhase === "post-command" && ' · Di: "next", "repeat" o "stop"'}
             </Text>
           </View>
         )}
@@ -846,9 +976,10 @@ export default function PracticeScreen() {
           <View style={styles.voiceIndicator}>
             <Text style={styles.voiceIndicatorText}>
               🎧 Modo escucha
-              {listenStage === "thinking" && ` · Piensa tu respuesta... ${countdown ?? ""}s`}
-              {listenStage === "answer-playing" && " · Reproduciendo respuesta correcta..."}
-              {listenStage === "verifying" &&
+              {paused && " · ⏸ Pausado"}
+              {!paused && listenStage === "thinking" && ` · Piensa tu respuesta... ${countdown ?? ""}s`}
+              {!paused && listenStage === "answer-playing" && " · Reproduciendo respuesta correcta..."}
+              {!paused && listenStage === "verifying" &&
                 ` · ¿Lo hiciste bien?${voiceMode ? ' (di "bien" o "malo")' : ""} ${countdown ?? ""}s`}
             </Text>
           </View>
@@ -1030,6 +1161,22 @@ const styles = StyleSheet.create({
   exitIcon: {
     fontSize: 16,
     lineHeight: 18,
+  },
+  controlsRow: {
+    flexDirection: "row",
+    gap: Spacing.two,
+    paddingHorizontal: Spacing.four,
+    paddingTop: Spacing.two,
+  },
+  controlButton: {
+    flex: 1,
+    paddingVertical: Spacing.two,
+    borderRadius: Radius.md,
+    alignItems: "center",
+  },
+  controlButtonText: {
+    fontSize: 12,
+    fontWeight: "600",
   },
   voiceIndicator: {
     alignSelf: "center",

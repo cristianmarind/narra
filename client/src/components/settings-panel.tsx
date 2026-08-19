@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, TextInput, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import { Brand, Radius, Spacing } from "@/constants/theme";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useThinkTime } from "@/hooks/use-think-time";
 import { useTtsSpeed } from "@/hooks/use-tts-speed";
 import { useUserLevel } from "@/hooks/use-user-level";
 import { useServices } from "@/services";
@@ -39,6 +40,12 @@ export function SettingsPanel() {
   const { mode, setMode, colors } = useAppTheme();
   const { speed, setSpeed } = useTtsSpeed();
   const { level, setLevel } = useUserLevel();
+  const {
+    firstWordSeconds,
+    perExtraWordSeconds,
+    setFirstWordSeconds,
+    setPerExtraWordSeconds,
+  } = useThinkTime();
   const { speech } = useServices();
 
   const [engineStatuses, setEngineStatuses] = useState<{
@@ -121,6 +128,30 @@ export function SettingsPanel() {
         </ThemedText>
       </View>
 
+      <View style={styles.section}>
+        <ThemedText type="small" themeColor="textSecondary">
+          Pausa para pensar (modo escucha)
+        </ThemedText>
+        <View style={styles.numberFieldRow}>
+          <NumberField
+            label="Primera palabra"
+            value={firstWordSeconds}
+            onCommit={setFirstWordSeconds}
+          />
+          <NumberField
+            label="Cada palabra extra"
+            value={perExtraWordSeconds}
+            onCommit={setPerExtraWordSeconds}
+          />
+        </View>
+        <ThemedText
+          type="small"
+          style={[styles.hint, { color: colors.textMuted }]}
+        >
+          En segundos, acepta decimales (ej: 0.3, 1.5, 2)
+        </ThemedText>
+      </View>
+
       {engineStatuses && (
         <View style={styles.section}>
           <ThemedText type="small" themeColor="textSecondary">
@@ -130,6 +161,55 @@ export function SettingsPanel() {
           <VoiceStatusRow label="Voz en español" status={engineStatuses.spanish} />
         </View>
       )}
+    </View>
+  );
+}
+
+/**
+ * Free-form decimal input for the think-time settings. Kept uncontrolled
+ * against the stored value while the user is typing (a raw string, so
+ * partial input like "0." or "1," doesn't get clobbered mid-edit) and only
+ * parses/commits on blur or submit; an invalid or empty value reverts to
+ * the last committed one instead of silently coercing to 0.
+ */
+function NumberField({
+  label,
+  value,
+  onCommit,
+}: {
+  label: string;
+  value: number;
+  onCommit: (value: number) => void;
+}) {
+  const { colors } = useAppTheme();
+  const [text, setText] = useState(String(value));
+
+  useEffect(() => {
+    setText(String(value));
+  }, [value]);
+
+  function commit() {
+    const parsed = parseFloat(text.replace(",", "."));
+    if (!isNaN(parsed)) {
+      onCommit(parsed);
+    } else {
+      setText(String(value));
+    }
+  }
+
+  return (
+    <View style={styles.numberField}>
+      <ThemedText type="small" themeColor="textSecondary">
+        {label}
+      </ThemedText>
+      <TextInput
+        value={text}
+        onChangeText={setText}
+        onBlur={commit}
+        onSubmitEditing={commit}
+        keyboardType="decimal-pad"
+        style={[styles.numberFieldInput, { borderColor: colors.border, color: colors.text }]}
+      />
     </View>
   );
 }
@@ -276,6 +356,21 @@ const styles = StyleSheet.create({
   hint: {
     fontSize: 11,
     fontStyle: "italic",
+  },
+  numberFieldRow: {
+    flexDirection: "row",
+    gap: Spacing.two,
+  },
+  numberField: {
+    flex: 1,
+    gap: Spacing.one,
+  },
+  numberFieldInput: {
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    fontSize: 14,
   },
   voiceRow: {
     flexDirection: "row",

@@ -13,6 +13,7 @@ import { Brand } from "@/constants/theme";
 import { AppThemeProvider, useAppTheme } from "@/hooks/use-app-theme";
 import { useBreakpoint } from "@/hooks/use-breakpoint";
 import { PhraseListsProvider } from "@/hooks/use-phrase-lists";
+import { ThinkTimeProvider } from "@/hooks/use-think-time";
 import { TtsSpeedProvider } from "@/hooks/use-tts-speed";
 import { UserLevelProvider } from "@/hooks/use-user-level";
 import { useAppLoading } from "@/hooks/use-app-loading";
@@ -170,11 +171,13 @@ export default function RootLayout() {
     <ServicesProvider>
       <TtsSpeedProvider>
         <UserLevelProvider>
-          <AppThemeProvider>
-            <PhraseListsProvider>
-              <RootLayoutInner />
-            </PhraseListsProvider>
-          </AppThemeProvider>
+          <ThinkTimeProvider>
+            <AppThemeProvider>
+              <PhraseListsProvider>
+                <RootLayoutInner />
+              </PhraseListsProvider>
+            </AppThemeProvider>
+          </ThinkTimeProvider>
         </UserLevelProvider>
       </TtsSpeedProvider>
     </ServicesProvider>

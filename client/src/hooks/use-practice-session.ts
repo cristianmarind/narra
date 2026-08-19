@@ -18,6 +18,8 @@ interface UsePracticeSessionReturn {
   /** Override the last result for a given phraseId as correct */
   overrideAsCorrect: (phraseId: string) => void;
   next: () => void;
+  /** Go back to the previous phrase, if any. A no-op on the first phrase. */
+  previous: () => void;
   reset: () => void;
 }
 
@@ -81,9 +83,12 @@ export function usePracticeSession(): UsePracticeSessionReturn {
         isCorrect,
       };
 
+      // Going back and re-answering a phrase replaces its result instead of
+      // adding a second one, so the session score reflects the latest answer.
       setSession((prev) => {
         if (!prev) return prev;
-        return { ...prev, results: [...prev.results, result] };
+        const results = [...prev.results.filter((r) => r.phraseId !== currentPhrase.id), result];
+        return { ...prev, results };
       });
       setLastResult(result);
 
@@ -107,7 +112,8 @@ export function usePracticeSession(): UsePracticeSessionReturn {
 
       setSession((prev) => {
         if (!prev) return prev;
-        return { ...prev, results: [...prev.results, result] };
+        const results = [...prev.results.filter((r) => r.phraseId !== currentPhrase.id), result];
+        return { ...prev, results };
       });
 
       return result;
@@ -142,6 +148,14 @@ export function usePracticeSession(): UsePracticeSessionReturn {
     setLastResult(null);
   }, [phrases.length]);
 
+  const previous = useCallback(() => {
+    setSession((prev) => {
+      if (!prev || prev.currentIndex <= 0) return prev;
+      return { ...prev, currentIndex: prev.currentIndex - 1 };
+    });
+    setLastResult(null);
+  }, []);
+
   const reset = useCallback(() => {
     setSession(null);
     setPhrases([]);
@@ -161,6 +175,7 @@ export function usePracticeSession(): UsePracticeSessionReturn {
     submitSelfGraded,
     overrideAsCorrect,
     next,
+    previous,
     reset,
   };
 }
