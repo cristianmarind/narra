@@ -73,7 +73,7 @@ export default function AiHelperScreen() {
         <BreadcrumbBar
           items={[
             { label: "Mis listas", onPress: () => router.replace("/") },
-            { label: "Importar JSON", onPress: () => router.replace("/list/import") },
+            { label: "Importar lista", onPress: () => router.replace("/list/import") },
             { label: "Generar con IA" },
           ]}
         />
@@ -84,7 +84,7 @@ export default function AiHelperScreen() {
             <ThemedText type="subtitle">Generar lista con IA</ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
               Usa este prompt con ChatGPT, Claude, Gemini o cualquier IA para generar una lista de frases.
-              Luego importa el JSON resultante con "Importar JSON".
+              Luego importa el JSON resultante con "Importar lista".
             </ThemedText>
           </View>
 
@@ -179,10 +179,24 @@ export default function AiHelperScreen() {
                 5. Guárdala en un archivo .json
               </ThemedText>
               <ThemedText type="small" themeColor="textSecondary">
-                6. Impórtala con "Importar JSON" en esta app
+                6. Impórtala con "Importar lista" en esta app
               </ThemedText>
             </View>
           </View>
+
+          {/* Back button */}
+          <Pressable
+            onPress={() => router.back()}
+            style={({ pressed }) => [
+              styles.button,
+              styles.secondaryButton,
+              pressed && styles.pressed,
+            ]}
+          >
+            <ThemedText style={styles.secondaryButtonText}>
+              ← Volver
+            </ThemedText>
+          </Pressable>
         </ScrollView>
       </SafeAreaView>
     </ThemedView>
@@ -244,6 +258,14 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  secondaryButton: {
+    backgroundColor: Brand.accentSoft,
+  },
+  secondaryButtonText: {
+    color: Brand.accent,
     fontSize: 16,
     fontWeight: "600",
   },

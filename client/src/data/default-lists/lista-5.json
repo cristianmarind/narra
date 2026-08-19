@@ -1,0 +1,314 @@
+{
+"name": "Frases en primera persona en todos los tiempos",
+"nativeLanguage": "español",
+"targetLanguage": "inglés",
+"phrases": [
+{
+"nativeSentence": "Yo",
+"acceptedTranslations": [
+"I"
+]
+},
+{
+"nativeSentence": "Gustar",
+"acceptedTranslations": [
+"like"
+]
+},
+{
+"nativeSentence": "Casa",
+"acceptedTranslations": [
+"house",
+"home"
+]
+},
+{
+"nativeSentence": "Me gusta la casa.",
+"acceptedTranslations": [
+"I like the house.",
+"I like the home."
+]
+},
+{
+"nativeSentence": "Mi",
+"acceptedTranslations": [
+"my"
+]
+},
+{
+"nativeSentence": "Me gusta mi casa.",
+"acceptedTranslations": [
+"I like my house.",
+"I like my home."
+]
+},
+{
+"nativeSentence": "Querer",
+"acceptedTranslations": [
+"want"
+]
+},
+{
+"nativeSentence": "Quiero mi casa.",
+"acceptedTranslations": [
+"I want my house.",
+"I want my home."
+]
+},
+{
+"nativeSentence": "Estar / Ser",
+"acceptedTranslations": [
+"I am",
+"I'm"
+]
+},
+{
+"nativeSentence": "Listo",
+"acceptedTranslations": [
+"ready"
+]
+},
+{
+"nativeSentence": "Estoy listo.",
+"acceptedTranslations": [
+"I am ready.",
+"I'm ready."
+]
+},
+{
+"nativeSentence": "Cansado",
+"acceptedTranslations": [
+"tired"
+]
+},
+{
+"nativeSentence": "Estoy cansado.",
+"acceptedTranslations": [
+"I am tired.",
+"I'm tired."
+]
+},
+{
+"nativeSentence": "Fui / Estuve",
+"acceptedTranslations": [
+"I was"
+]
+},
+{
+"nativeSentence": "Estuve en casa.",
+"acceptedTranslations": [
+"I was at home.",
+"I was in the house."
+]
+},
+{
+"nativeSentence": "Estuve cansado.",
+"acceptedTranslations": [
+"I was tired.",
+"I felt tired."
+]
+},
+{
+"nativeSentence": "Estuve listo.",
+"acceptedTranslations": [
+"I was ready.",
+"I was prepared."
+]
+},
+{
+"nativeSentence": "Ayer estuve en casa.",
+"acceptedTranslations": [
+"I was at home yesterday.",
+"Yesterday, I was at home."
+]
+},
+{
+"nativeSentence": "Haré / Voy a",
+"acceptedTranslations": [
+"I will",
+"I'll"
+]
+},
+{
+"nativeSentence": "Trabajar",
+"acceptedTranslations": [
+"work"
+]
+},
+{
+"nativeSentence": "Trabajaré mañana.",
+"acceptedTranslations": [
+"I will work tomorrow.",
+"I'll work tomorrow."
+]
+},
+{
+"nativeSentence": "Estaré en casa mañana.",
+"acceptedTranslations": [
+"I will be at home tomorrow.",
+"I'll be at home tomorrow."
+]
+},
+{
+"nativeSentence": "Querría / Me gustaría",
+"acceptedTranslations": [
+"I would",
+"I'd"
+]
+},
+{
+"nativeSentence": "Me gustaría una casa.",
+"acceptedTranslations": [
+"I would like a house.",
+"I'd like a house."
+]
+},
+{
+"nativeSentence": "Me gustaría mi propia casa.",
+"acceptedTranslations": [
+"I would like my own house.",
+"I'd like my own home."
+]
+},
+{
+"nativeSentence": "Me gustaría trabajar desde casa.",
+"acceptedTranslations": [
+"I would like to work from home.",
+"I'd like to work from home."
+]
+},
+{
+"nativeSentence": "Me gusta trabajar desde casa.",
+"acceptedTranslations": [
+"I like working from home.",
+"I like to work from home."
+]
+},
+{
+"nativeSentence": "Quiero trabajar desde casa.",
+"acceptedTranslations": [
+"I want to work from home.",
+"I want to work from my house."
+]
+},
+{
+"nativeSentence": "Me gusta mi trabajo.",
+"acceptedTranslations": [
+"I like my job.",
+"I like my work."
+]
+},
+{
+"nativeSentence": "Quiero mejorar.",
+"acceptedTranslations": [
+"I want to improve.",
+"I want to get better."
+]
+},
+{
+"nativeSentence": "Me gustaría mejorar.",
+"acceptedTranslations": [
+"I would like to improve.",
+"I'd like to get better."
+]
+},
+{
+"nativeSentence": "Ayer trabajé en casa.",
+"acceptedTranslations": [
+"I worked at home yesterday.",
+"I worked from home yesterday."
+]
+},
+{
+"nativeSentence": "He trabajado desde casa.",
+"acceptedTranslations": [
+"I have worked from home.",
+"I've worked from home."
+]
+},
+{
+"nativeSentence": "He estado trabajando desde casa.",
+"acceptedTranslations": [
+"I have been working from home.",
+"I've been working from home."
+]
+},
+{
+"nativeSentence": "Había trabajado desde casa.",
+"acceptedTranslations": [
+"I had worked from home.",
+"I'd worked from home."
+]
+},
+{
+"nativeSentence": "Había estado trabajando desde casa.",
+"acceptedTranslations": [
+"I had been working from home.",
+"I'd been working from home."
+]
+},
+{
+"nativeSentence": "Trabajaré desde casa.",
+"acceptedTranslations": [
+"I will work from home.",
+"I'll work from home."
+]
+},
+{
+"nativeSentence": "Habré terminado el trabajo.",
+"acceptedTranslations": [
+"I will have finished the work.",
+"I'll have finished the work."
+]
+},
+{
+"nativeSentence": "Trabajaría desde casa.",
+"acceptedTranslations": [
+"I would work from home.",
+"I'd work from home."
+]
+},
+{
+"nativeSentence": "Trabajaría más si tuviera tiempo.",
+"acceptedTranslations": [
+"I would work more if I had time.",
+"I'd work more if I had time."
+]
+},
+{
+"nativeSentence": "Me habría gustado trabajar desde casa.",
+"acceptedTranslations": [
+"I would have liked to work from home.",
+"I'd have liked to work from home."
+]
+},
+{
+"nativeSentence": "Me gusta aprender cosas nuevas.",
+"acceptedTranslations": [
+"I like learning new things.",
+"I like to learn new things."
+]
+},
+{
+"nativeSentence": "Quiero aprender algo nuevo.",
+"acceptedTranslations": [
+"I want to learn something new.",
+"I want to learn something new."
+]
+},
+{
+"nativeSentence": "Me gustaría aprender más.",
+"acceptedTranslations": [
+"I would like to learn more.",
+"I'd like to learn more."
+]
+},
+{
+"nativeSentence": "Sé que puedo mejorar.",
+"acceptedTranslations": [
+"I know I can improve.",
+"I know that I can get better."
+]
+}
+]
+}

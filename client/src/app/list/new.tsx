@@ -50,7 +50,7 @@ export default function NewListScreen() {
               <ThemedView type="backgroundElement" style={styles.optionCard}>
                 <ThemedText style={styles.optionIcon}>📥</ThemedText>
                 <View style={styles.optionText}>
-                  <ThemedText type="subtitle">Importar JSON</ThemedText>
+                  <ThemedText type="subtitle">Importar lista</ThemedText>
                   <ThemedText type="small" themeColor="textSecondary">
                     Apoyate de la IA para generar un listado de frases
                   </ThemedText>

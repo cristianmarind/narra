@@ -117,7 +117,7 @@ export default function ImportListScreen() {
 
   function handleParseText() {
     if (!jsonText.trim()) {
-      Alert.alert("Error", "Pega el JSON primero");
+      Alert.alert("Error", "Pega el listado primero");
       return;
     }
 
@@ -183,7 +183,7 @@ export default function ImportListScreen() {
           items={[
             { label: "Mis listas", onPress: () => router.replace("/") },
             { label: "Nueva lista", onPress: () => router.replace("/list/new") },
-            { label: "Importar JSON" },
+            { label: "Importar lista" },
           ]}
         />
 
@@ -207,9 +207,9 @@ export default function ImportListScreen() {
         <ScrollView contentContainerStyle={styles.content}>
           {/* Instructions */}
           <View style={styles.section}>
-            <ThemedText type="subtitle">Importar lista desde JSON</ThemedText>
+            <ThemedText type="subtitle">Importar lista</ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
-              Selecciona un archivo, pega el JSON directamente, o genera uno con IA.
+              Selecciona un archivo, pega el listado directamente, o genera uno con IA.
             </ThemedText>
             <Pressable
               onPress={() => router.push("/list/ai-helper")}
@@ -247,7 +247,7 @@ export default function ImportListScreen() {
           {/* Paste JSON text */}
           <View style={styles.section}>
             <ThemedText type="small" themeColor="textSecondary">
-              Pega el JSON directamente:
+              Pega el listado directamente:
             </ThemedText>
             <TextInput
               style={styles.textArea}
@@ -269,7 +269,7 @@ export default function ImportListScreen() {
               ]}
             >
               <ThemedText style={styles.secondaryButtonText}>
-                Importar JSON
+                Importar lista
               </ThemedText>
             </Pressable>
           </View>

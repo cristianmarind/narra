@@ -9,10 +9,12 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { NarraLogo } from "@/components/narra-logo";
 import { NavDrawer } from "@/components/nav-drawer";
 import { SettingsModal } from "@/components/settings-modal";
+import { TermsModal } from "@/components/terms-modal";
 import { Brand } from "@/constants/theme";
 import { AppThemeProvider, useAppTheme } from "@/hooks/use-app-theme";
 import { useBreakpoint } from "@/hooks/use-breakpoint";
 import { PhraseListsProvider } from "@/hooks/use-phrase-lists";
+import { TermsAcceptanceProvider } from "@/hooks/use-terms-acceptance";
 import { ThinkTimeProvider } from "@/hooks/use-think-time";
 import { TtsSpeedProvider } from "@/hooks/use-tts-speed";
 import { UserLevelProvider } from "@/hooks/use-user-level";
@@ -126,7 +128,7 @@ function RootLayoutInner() {
             />
             <Stack.Screen name="list/new" options={{ title: "Nueva lista" }} />
             <Stack.Screen name="list/create" options={{ title: "Crear lista" }} />
-            <Stack.Screen name="list/import" options={{ title: "Importar JSON" }} />
+            <Stack.Screen name="list/import" options={{ title: "Importar lista" }} />
             <Stack.Screen name="list/ai-helper" options={{ title: "Generar con IA" }} />
             <Stack.Screen name="list/[id]/index" options={{ title: "Lista" }} />
             <Stack.Screen name="list/[id]/edit" options={{ title: "Editar frases" }} />
@@ -168,19 +170,22 @@ function RootLayoutInner() {
 
 export default function RootLayout() {
   return (
-    <ServicesProvider>
-      <TtsSpeedProvider>
-        <UserLevelProvider>
-          <ThinkTimeProvider>
-            <AppThemeProvider>
-              <PhraseListsProvider>
-                <RootLayoutInner />
-              </PhraseListsProvider>
-            </AppThemeProvider>
-          </ThinkTimeProvider>
-        </UserLevelProvider>
-      </TtsSpeedProvider>
-    </ServicesProvider>
+    <TermsAcceptanceProvider>
+      <ServicesProvider>
+        <TtsSpeedProvider>
+          <UserLevelProvider>
+            <ThinkTimeProvider>
+              <AppThemeProvider>
+                <PhraseListsProvider>
+                  <RootLayoutInner />
+                  <TermsModal />
+                </PhraseListsProvider>
+              </AppThemeProvider>
+            </ThinkTimeProvider>
+          </UserLevelProvider>
+        </TtsSpeedProvider>
+      </ServicesProvider>
+    </TermsAcceptanceProvider>
   );
 }
 
