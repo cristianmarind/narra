@@ -18,6 +18,7 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { AnswerInput } from "@/components/practice/answer-input";
 import { PracticeFeedback } from "@/components/practice/practice-feedback";
+import { TranslationsList } from "@/components/practice/translations-list";
 import { Brand, Layout, Radius, Spacing } from "@/constants/theme";
 import {
   FEEDBACK_CORRECT,
@@ -715,6 +716,15 @@ export default function PracticeScreen() {
     setCountdown(-1);
   }
 
+  /** Listen mode: the user signals they already have their answer, cutting
+   * the thinking pause short and jumping straight to the correct answer. */
+  function handleReadyForAnswer() {
+    if (listenStageRef.current !== "thinking" || isPausedRef.current) return;
+    stopTimer();
+    setCountdown(null);
+    playCorrectAnswerThenContinue();
+  }
+
   function doSubmit(answerText: string) {
     if (!currentPhrase || !list) return;
     // The phrase may still be being read (user answered early): cut it and
@@ -841,6 +851,19 @@ export default function PracticeScreen() {
     // Plain manual mode (no voice): nothing auto-driven to resume — typing continues as-is
   }
 
+  /** Paused + listen mode only: skip straight to revealing the correct answer,
+   * resuming playback in the process. Mirrors handleReadyForAnswer, but usable
+   * from any pre-reveal stage (including mid-pause before "thinking" even
+   * started) instead of only the thinking pause. */
+  function handleRevealWhilePaused() {
+    if (!isPausedRef.current || !isListenMode) return;
+    isPausedRef.current = false;
+    setPaused(false);
+    stopTimer();
+    setCountdown(null);
+    playCorrectAnswerThenContinue();
+  }
+
   async function handleAddAsCorrect() {
     if (!lastResult || !currentPhrase || !list) return;
     if (!currentPhrase.sponsoredBy) {
@@ -915,51 +938,6 @@ export default function PracticeScreen() {
           </Pressable>
         </View>
 
-        {/* Transport controls: available in every mode, regardless of stage */}
-        <View style={styles.controlsRow}>
-          <Pressable
-            onPress={handlePrevious}
-            disabled={progress.current <= 1}
-            accessibilityLabel="Frase anterior"
-            style={({ pressed }) => [
-              styles.controlButton,
-              { backgroundColor: colors.surfaceMuted },
-              pressed && styles.pressed,
-              progress.current <= 1 && styles.disabled,
-            ]}
-          >
-            <Text style={[styles.controlButtonText, { color: colors.textSecondary }]}>
-              ⏮ Anterior
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={paused ? handleResume : handlePause}
-            accessibilityLabel={paused ? "Reanudar" : "Pausar"}
-            style={({ pressed }) => [
-              styles.controlButton,
-              { backgroundColor: colors.surfaceMuted },
-              pressed && styles.pressed,
-            ]}
-          >
-            <Text style={[styles.controlButtonText, { color: colors.textSecondary }]}>
-              {paused ? "▶ Reanudar" : "⏸ Pausar"}
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={handleNext}
-            accessibilityLabel="Siguiente frase"
-            style={({ pressed }) => [
-              styles.controlButton,
-              { backgroundColor: colors.surfaceMuted },
-              pressed && styles.pressed,
-            ]}
-          >
-            <Text style={[styles.controlButtonText, { color: colors.textSecondary }]}>
-              Siguiente ⏭
-            </Text>
-          </Pressable>
-        </View>
-
         {!isListenMode && voiceMode && (
           <View style={styles.voiceIndicator}>
             <Text style={styles.voiceIndicatorText}>
@@ -1024,9 +1002,13 @@ export default function PracticeScreen() {
                 Hidden once feedback is up — it already shows the answer.
                 Listen mode has its own reveal below instead. */}
             {!isListenMode && list.showTranslation && currentPhrase && !lastResult && (
-              <Text style={[styles.revealedTranslation, { color: colors.textSecondary }]}>
-                💡 {currentPhrase.acceptedTranslations[0]}
-              </Text>
+              <TranslationsList
+                key={`learn-${currentPhrase.id}`}
+                translations={currentPhrase.acceptedTranslations}
+                itemPrefix="💡 "
+                textStyle={[styles.revealedTranslation, { color: colors.textSecondary }]}
+                linkStyle={[styles.revealLink, { color: colors.textMuted }]}
+              />
             )}
 
             {/* Listen mode: show the correct translation as text for as long as
@@ -1036,9 +1018,13 @@ export default function PracticeScreen() {
             {isListenMode &&
               (listenStage === "answer-playing" || listenStage === "verifying") &&
               currentPhrase && (
-                <Text style={[styles.revealedTranslation, { color: colors.textSecondary }]}>
-                  💡 {currentPhrase.acceptedTranslations[0]}
-                </Text>
+                <TranslationsList
+                  key={`listen-${currentPhrase.id}`}
+                  translations={currentPhrase.acceptedTranslations}
+                  itemPrefix="💡 "
+                  textStyle={[styles.revealedTranslation, { color: colors.textSecondary }]}
+                  linkStyle={[styles.revealLink, { color: colors.textMuted }]}
+                />
               )}
 
             <Pressable
@@ -1059,7 +1045,14 @@ export default function PracticeScreen() {
 
           <View style={styles.footer}>
             {isListenMode ? (
-              listenStage === "verifying" && selfVerify ? (
+              listenStage === "thinking" && !paused ? (
+                <Pressable
+                  onPress={handleReadyForAnswer}
+                  style={({ pressed }) => [styles.nextButton, pressed && styles.pressed]}
+                >
+                  <Text style={styles.nextButtonText}>Ya tengo la respuesta →</Text>
+                </Pressable>
+              ) : listenStage === "verifying" && selfVerify ? (
                 <View style={styles.verifyRow}>
                   <Pressable
                     onPress={() => finishListenPhrase(true)}
@@ -1124,6 +1117,62 @@ export default function PracticeScreen() {
           </View>
         </ContentContainer>
         </KeyboardAvoidingView>
+
+        {/* Transport controls: available in every mode, regardless of stage.
+            Pinned at the very bottom, below everything else. */}
+        <View style={styles.bottomControls}>
+          {paused && isListenMode && listenStage !== "answer-playing" && listenStage !== "verifying" && (
+            <Pressable
+              onPress={handleRevealWhilePaused}
+              style={({ pressed }) => [styles.revealButton, pressed && styles.pressed]}
+            >
+              <Text style={styles.revealButtonText}>👁 Ya tengo la respuesta</Text>
+            </Pressable>
+          )}
+          <View style={styles.controlsRow}>
+            <Pressable
+              onPress={handlePrevious}
+              disabled={progress.current <= 1}
+              accessibilityLabel="Frase anterior"
+              style={({ pressed }) => [
+                styles.controlButton,
+                { backgroundColor: colors.surfaceMuted },
+                pressed && styles.pressed,
+                progress.current <= 1 && styles.disabled,
+              ]}
+            >
+              <Text style={[styles.controlButtonText, { color: colors.textSecondary }]}>
+                ⏮ Anterior
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={paused ? handleResume : handlePause}
+              accessibilityLabel={paused ? "Reanudar" : "Pausar"}
+              style={({ pressed }) => [
+                styles.controlButton,
+                { backgroundColor: colors.surfaceMuted },
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={[styles.controlButtonText, { color: colors.textSecondary }]}>
+                {paused ? "▶ Reanudar" : "⏸ Pausar"}
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={handleNext}
+              accessibilityLabel="Siguiente frase"
+              style={({ pressed }) => [
+                styles.controlButton,
+                { backgroundColor: colors.surfaceMuted },
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={[styles.controlButtonText, { color: colors.textSecondary }]}>
+                Siguiente ⏭
+              </Text>
+            </Pressable>
+          </View>
+        </View>
       </SafeAreaView>
     </ThemedView>
   );
@@ -1162,11 +1211,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 18,
   },
-  controlsRow: {
-    flexDirection: "row",
+  bottomControls: {
     gap: Spacing.two,
     paddingHorizontal: Spacing.four,
     paddingTop: Spacing.two,
+    paddingBottom: Spacing.two,
+  },
+  controlsRow: {
+    flexDirection: "row",
+    gap: Spacing.two,
   },
   controlButton: {
     flex: 1,
@@ -1176,6 +1229,17 @@ const styles = StyleSheet.create({
   },
   controlButtonText: {
     fontSize: 12,
+    fontWeight: "600",
+  },
+  revealButton: {
+    paddingVertical: Spacing.two,
+    borderRadius: Radius.md,
+    alignItems: "center",
+    backgroundColor: Brand.accent,
+  },
+  revealButtonText: {
+    color: Brand.onPrimary,
+    fontSize: 13,
     fontWeight: "600",
   },
   voiceIndicator: {
@@ -1246,6 +1310,11 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     fontStyle: "italic",
     textAlign: "center",
+  },
+  revealLink: {
+    fontSize: 12,
+    textAlign: "center",
+    textDecorationLine: "underline",
   },
   listen: {
     marginTop: Spacing.two,

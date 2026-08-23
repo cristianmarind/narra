@@ -1,5 +1,33 @@
 {
   "version": 1,
   "updatedAt": "2026-07-27T00:00:00Z",
-  "campaigns": []
+  "campaigns": [
+    {
+      "id": "narra-share-2026-08",
+      "advertiser": "Narra",
+      "active": true,
+      "nativeLanguage": "es",
+      "targetLanguage": "en",
+      "phrases": [
+        {
+          "id": "narra-001",
+          "text": "Comparte esta app.",
+          "acceptedTranslations": [
+            "Share this app.",
+            "Share the app."
+          ],
+          "level": "none"
+        },
+        {
+          "id": "narra-002",
+          "text": "Con Narra aprendes inglés.",
+          "acceptedTranslations": [
+            "With Narra, you learn English.",
+            "You learn English with Narra."
+          ],
+          "level": "beginner"
+        }
+      ]
+    }
+  ]
 }

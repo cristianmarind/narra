@@ -1,10 +1,11 @@
 import React, { createContext, useContext, useRef, useState } from "react";
-import type { AdsService, FullscreenAdsService, StorageService, SpeechService, SpeechRecognitionService } from "@/types";
+import type { AdsService, DefaultListsService, FullscreenAdsService, StorageService, SpeechService, SpeechRecognitionService } from "@/types";
 import { createAsyncStorageService } from "./storage";
 import { createDefaultSpeechService } from "./speech";
 import { createExpoSpeechRecognitionService } from "./recognition";
 import { createRegistryAdsService } from "./ads";
 import { createFullscreenAdsService } from "./fullscreen-ads";
+import { createRegistryDefaultListsService } from "./default-lists";
 
 export interface Services {
   storage: StorageService;
@@ -12,6 +13,7 @@ export interface Services {
   speechRecognition: SpeechRecognitionService;
   ads: AdsService;
   fullscreenAds: FullscreenAdsService;
+  defaultLists: DefaultListsService;
 }
 
 const ServicesContext = createContext<Services | null>(null);
@@ -31,6 +33,7 @@ export function ServicesProvider({ children, overrides }: ServicesProviderProps)
     speechRecognition: overrides?.speechRecognition ?? createExpoSpeechRecognitionService(),
     ads: overrides?.ads ?? createRegistryAdsService(),
     fullscreenAds: overrides?.fullscreenAds ?? createFullscreenAdsService(),
+    defaultLists: overrides?.defaultLists ?? createRegistryDefaultListsService(),
   }));
 
   return (

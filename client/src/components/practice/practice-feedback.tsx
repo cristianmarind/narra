@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
+import { TranslationsList } from "@/components/practice/translations-list";
 import { Feedback, Radius, Spacing } from "@/constants/theme";
 import type { Phrase, PhraseResult } from "@/types";
 
@@ -69,9 +70,14 @@ export function PracticeFeedback({
 
       {!result.isCorrect && (
         <View style={styles.details}>
-          <Text style={[styles.detail, { color: tone.text }]}>
-            Esperada: {phrase.acceptedTranslations[0]}
-          </Text>
+          <TranslationsList
+            key={phrase.id}
+            translations={phrase.acceptedTranslations}
+            label="Esperada:"
+            itemPrefix="– "
+            textStyle={[styles.detail, { color: tone.text }]}
+            linkStyle={[styles.link, { color: tone.strong }]}
+          />
           <Text style={[styles.detail, { color: tone.text }]}>
             Tu respuesta: "{result.userAnswer}"
           </Text>

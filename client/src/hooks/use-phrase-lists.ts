@@ -4,6 +4,7 @@ import { DEFAULT_LISTS } from "@/data/default-lists";
 import { useServices } from "@/services";
 import type {
   AcceptedTranslation,
+  DefaultListDef,
   Phrase,
   PhraseList,
   PhraseStats,
@@ -47,11 +48,35 @@ interface PhraseListsContextValue {
 const PhraseListsContext = createContext<PhraseListsContextValue | null>(null);
 
 /**
+ * Merge freshly-synced default-list phrases into what's already stored,
+ * matched by sentence text. Preserves id/stats/userTranslations for phrases
+ * that still exist so a content update doesn't wipe practice progress;
+ * phrases no longer present remotely are dropped, new ones get a fresh id.
+ */
+function mergeDefaultListPhrases(
+  existingPhrases: Phrase[],
+  remotePhrases: DefaultListDef["phrases"]
+): Phrase[] {
+  const existingBySentence = new Map(existingPhrases.map((p) => [p.nativeSentence, p]));
+  return remotePhrases.map((rp) => {
+    const match = existingBySentence.get(rp.nativeSentence);
+    return {
+      id: match?.id ?? generateId(),
+      nativeSentence: rp.nativeSentence,
+      acceptedTranslations: rp.acceptedTranslations,
+      ...(rp.properNouns?.length ? { properNouns: rp.properNouns } : {}),
+      ...(match?.userTranslations?.length ? { userTranslations: match.userTranslations } : {}),
+      ...(match?.stats ? { stats: match.stats } : {}),
+    };
+  });
+}
+
+/**
  * Provider that holds the single source of truth for phrase lists.
  * Must wrap all screens that use usePhraseLists().
  */
 export function PhraseListsProvider({ children }: { children: React.ReactNode }) {
-  const { storage, speech } = useServices();
+  const { storage, speech, defaultLists } = useServices();
   const [lists, setLists] = useState<PhraseList[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -65,6 +90,52 @@ export function PhraseListsProvider({ children }: { children: React.ReactNode })
     }
   }, [storage]);
 
+  /**
+   * Checks the default-lists manifest for content that's new or changed
+   * since the last sync, and applies it: patches an existing default list in
+   * place (matched by `defaultListId`, preserving progress via
+   * mergeDefaultListPhrases) or seeds a brand-new one when the manifest
+   * entry's id hasn't been seen before. Silent no-op offline or unconfigured.
+   */
+  const syncDefaultLists = useCallback(async () => {
+    const updates = await defaultLists.checkForUpdates();
+    if (updates.length === 0) return;
+
+    const current = await storage.getLists();
+    const now = new Date().toISOString();
+    for (const { id, def } of updates) {
+      const existing = current.find((l) => l.defaultListId === id);
+      if (existing) {
+        existing.name = def.name;
+        existing.nativeLanguage = def.nativeLanguage;
+        existing.targetLanguage = def.targetLanguage;
+        if (def.showTranslation !== undefined) existing.showTranslation = def.showTranslation;
+        existing.phrases = mergeDefaultListPhrases(existing.phrases, def.phrases);
+        existing.updatedAt = now;
+        await storage.saveList(existing);
+      } else {
+        await storage.saveList({
+          id: generateId(),
+          defaultListId: id,
+          name: def.name,
+          nativeLanguage: def.nativeLanguage,
+          targetLanguage: def.targetLanguage,
+          showTranslation: def.showTranslation,
+          phrases: def.phrases.map((p) => ({
+            id: generateId(),
+            nativeSentence: p.nativeSentence,
+            acceptedTranslations: p.acceptedTranslations,
+            ...(p.properNouns?.length ? { properNouns: p.properNouns } : {}),
+          })),
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+    }
+    await defaultLists.markApplied(updates.map(({ id, updatedAt }) => ({ id, updatedAt })));
+    await refresh();
+  }, [defaultLists, storage, refresh]);
+
   useEffect(() => {
     (async () => {
       const seeded = await AsyncStorage.getItem(SEEDED_KEY);
@@ -74,9 +145,10 @@ export function PhraseListsProvider({ children }: { children: React.ReactNode })
         const existing = await storage.getLists();
         if (existing.length === 0) {
           const now = new Date().toISOString();
-          for (const def of DEFAULT_LISTS) {
+          for (const { id, def } of DEFAULT_LISTS) {
             await storage.saveList({
               id: generateId(),
+              defaultListId: id,
               name: def.name,
               nativeLanguage: def.nativeLanguage,
               targetLanguage: def.targetLanguage,
@@ -95,8 +167,12 @@ export function PhraseListsProvider({ children }: { children: React.ReactNode })
         await AsyncStorage.setItem(SEEDED_KEY, "1");
       }
       await refresh();
+      // Bundled ids were never marked "applied", so this also picks up
+      // fresher content for them on the very first run that has internet —
+      // no need to wait for a later sync cycle.
+      await syncDefaultLists();
     })();
-  }, [refresh, storage]);
+  }, [refresh, storage, syncDefaultLists]);
 
   const createList = useCallback(
     async (name: string, nativeLanguage: string, targetLanguage: string) => {

@@ -14,3 +14,4 @@ export * from "./recognition";
 export * from "./storage";
 export * from "./ads";
 export * from "./fullscreen-ads";
+export * from "./default-lists";

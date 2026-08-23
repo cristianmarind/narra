@@ -12,9 +12,9 @@ import { PROFICIENCY_LEVELS } from "@/types";
 import bundledRegistry from "./bundled-registry.json";
 
 /**
- * Static registry published on Cloudflare Pages (see /ads in the repo).
- * Configured via .env; when absent the app skips the network entirely and
- * relies on the cached/bundled registry.
+ * Registry served by the Cloudflare Worker in /worker/worker.js at the repo
+ * root. Configured via .env; when absent the app skips the network entirely
+ * and relies on the cached/bundled registry.
  */
 const REGISTRY_URL = process.env.EXPO_PUBLIC_ADS_REGISTRY_URL;
 

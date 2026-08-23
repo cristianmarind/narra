@@ -104,7 +104,6 @@ function RootLayoutInner() {
               // top of that would be a second, redundant title bar.
               headerShown: isCompact,
               headerLeft: menuButton,
-              headerRight: adsInfoButton,
               headerStyle: { backgroundColor: Brand.primary },
               headerTintColor: Brand.onPrimary,
               headerTitleStyle: { color: Brand.onPrimary },
@@ -124,6 +123,9 @@ function RootLayoutInner() {
                     onPress={() => router.replace("/")}
                   />
                 ),
+                // The ads-policy pill only appears in the lobby; other screens
+                // keep the header free for their own actions
+                headerRight: adsInfoButton,
               }}
             />
             <Stack.Screen name="list/new" options={{ title: "Nueva lista" }} />

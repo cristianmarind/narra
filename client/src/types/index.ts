@@ -52,6 +52,65 @@ export interface PhraseList {
    * starting from zero). Persisted per list.
    */
   showTranslation?: boolean;
+  /**
+   * Id of the remote/bundled default list this was seeded from, if any. Lets
+   * the default-lists sync find this list again to apply content updates,
+   * and tells it the list was already offered before — so deleting it
+   * doesn't bring it back on the next sync. Absent on user-created/imported
+   * lists.
+   */
+  defaultListId?: string;
+}
+
+// ===== Default Lists (remote sync) =====
+
+/** Same shape as the import-JSON schema documented in list/import.tsx. */
+export interface DefaultListDef {
+  name: string;
+  nativeLanguage: string;
+  targetLanguage: string;
+  /** Enable learning mode (show the correct translation) when seeding */
+  showTranslation?: boolean;
+  phrases: {
+    nativeSentence: string;
+    acceptedTranslations: string[];
+    /** Names/Spanish words the recognizer can't transcribe faithfully; always accepted */
+    properNouns?: string[];
+  }[];
+}
+
+/**
+ * One entry of the remote default-lists manifest: where to fetch a list's
+ * full content, and when it last changed. `id` is stable across publishes —
+ * it ties a manifest entry to the local PhraseList it seeds/updates.
+ */
+export interface DefaultListManifestEntry {
+  id: string;
+  url: string;
+  updatedAt: string;
+}
+
+/** Shape of the remote manifest JSON consumed by the app. */
+export interface DefaultListsManifest {
+  version: number;
+  lists: DefaultListManifestEntry[];
+}
+
+export interface DefaultListsService {
+  /**
+   * Cache-first (TTL) check against the remote manifest, diffed against what
+   * was last applied locally. Returns the definitions that are new or
+   * changed — already fetched and validated — keyed by manifest id. Never
+   * throws; resolves to [] on any failure (offline, malformed, no manifest
+   * URL configured, etc).
+   */
+  checkForUpdates(): Promise<{ id: string; updatedAt: string; def: DefaultListDef }[]>;
+  /**
+   * Records that the given manifest entries were successfully applied
+   * locally, so they aren't reported as changed again next time. Call only
+   * after actually seeding/updating the corresponding lists.
+   */
+  markApplied(entries: { id: string; updatedAt: string }[]): Promise<void>;
 }
 
 // ===== Sponsored Ads =====
