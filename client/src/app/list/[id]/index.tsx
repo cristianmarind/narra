@@ -1,6 +1,15 @@
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
-import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { BreadcrumbBar } from "@/components/breadcrumb-bar";
@@ -10,6 +19,7 @@ import { ProgressBar } from "@/components/progress-bar";
 import { StatTile } from "@/components/stat-tile";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { LOOKAHEAD_WINDOW_SIZE, PRACTICE_START_DELAY_MS } from "@/constants/practice";
 import { Brand, Layout, Radius, Spacing } from "@/constants/theme";
 import { useBreakpoint } from "@/hooks/use-breakpoint";
 import { usePhraseLists } from "@/hooks/use-phrase-lists";
@@ -44,6 +54,16 @@ export default function ListDetailScreen() {
   // Fixed the moment random mode is switched on, so the practice screen plays
   // (and this screen preloads) the exact same order
   const [shuffledOrder, setShuffledOrder] = useState<Phrase[] | null>(null);
+  // True for PRACTICE_START_DELAY_MS after pressing "Practicar", before
+  // navigating — gives the lookahead warmup a head start (see constants/practice.ts)
+  const [starting, setStarting] = useState(false);
+  const startingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (startingTimerRef.current) clearTimeout(startingTimerRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     const found = lists.find((l) => l.id === id) ?? null;
@@ -61,7 +81,9 @@ export default function ListDetailScreen() {
 
       speech.cancelWarmups?.();
       if (speech.pregenerate) {
-        const firstAnswers = found.phrases.slice(0, 5).map((p) => p.acceptedTranslations[0]);
+        const firstAnswers = found.phrases
+          .slice(0, LOOKAHEAD_WINDOW_SIZE)
+          .map((p) => p.acceptedTranslations[0]);
         speech.pregenerate(firstAnswers, found.targetLanguage);
       }
     }, [lists, id, speech])
@@ -112,12 +134,21 @@ export default function ListDetailScreen() {
       }
       return;
     }
+    if (starting) return;
 
     const order =
       randomOrder && shuffledOrder ? `&order=${shuffledOrder.map((p) => p.id).join(",")}` : "";
-    router.push(
-      `/list/${id}/practice?mode=${mode}&voiceMode=${voiceMode ? "1" : "0"}&selfVerify=${selfVerify ? "1" : "0"}${order}`
-    );
+
+    // The lookahead warmup for this list is already running (useFocusEffect
+    // above); this delay just gives it a head start before the practice
+    // screen actually needs the audio, instead of racing it from a cold start.
+    setStarting(true);
+    startingTimerRef.current = setTimeout(() => {
+      setStarting(false);
+      router.push(
+        `/list/${id}/practice?mode=${mode}&voiceMode=${voiceMode ? "1" : "0"}&selfVerify=${selfVerify ? "1" : "0"}${order}`
+      );
+    }, PRACTICE_START_DELAY_MS);
   }
 
   if (!list) {
@@ -196,13 +227,22 @@ export default function ListDetailScreen() {
               <View style={[styles.actions, isExpanded && styles.actionsColumn]}>
                 <Pressable
                   onPress={handlePractice}
+                  disabled={starting}
                   style={({ pressed }) => [
                     styles.button,
                     styles.primaryButton,
                     pressed && styles.pressed,
+                    starting && styles.disabled,
                   ]}
                 >
-                  <Text style={styles.primaryButtonText}>▶  Practicar</Text>
+                  {starting ? (
+                    <View style={styles.startingRow}>
+                      <ActivityIndicator size="small" color={Brand.onPrimary} />
+                      <Text style={styles.primaryButtonText}>Preparando…</Text>
+                    </View>
+                  ) : (
+                    <Text style={styles.primaryButtonText}>▶  Practicar</Text>
+                  )}
                 </Pressable>
 
                 <Pressable
@@ -480,6 +520,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
   },
+  startingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.two,
+  },
   secondaryButton: {
     borderWidth: 1,
     borderColor: Brand.accent,
@@ -564,5 +609,8 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.7,
+  },
+  disabled: {
+    opacity: 0.6,
   },
 });

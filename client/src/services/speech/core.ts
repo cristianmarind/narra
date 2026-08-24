@@ -7,14 +7,15 @@
  *
  * Cache layers:
  * 1. In-memory Map (session cache, cleared on clearSessionCache())
- * 2. AudioStore (persistent cache for first phrases, survives restarts —
- *    IndexedDB on web, files on native)
+ * 2. AudioStore (persistent cache for each list's leading phrases, survives
+ *    restarts — IndexedDB on web, files on native)
  *
  * Within those layers, entries fall into three permanence tiers:
  * - Pinned: fixed app messages (feedback, intro). Always generated at the
  *   constant PINNED_SPEED, never purged by anything — a speed change can't
  *   invalidate them because they never used the user's speed to begin with.
- * - Persisted: first phrase of each list. Survives clearSessionCache always,
+ * - Persisted: a list's leading phrases (how many is a caller policy — see
+ *   PERSISTED_PHRASES_PER_LIST in constants/practice.ts). Survives clearSessionCache always,
  *   and survives clearAllCache too UNLESS its audio was baked at the old
  *   speed (only engines with speedInGeneration bake speed in; others apply
  *   it at playback, so their cache is speed-agnostic).
@@ -205,7 +206,7 @@ export function createSpeechCore(deps: SpeechCoreDeps): SpeechCoreService {
 
   // In-memory session cache (cleared when leaving practice)
   const sessionCache = new Map<string, Waveform>();
-  // Keys that are persisted (first phrase per list) — survive clearSessionCache
+  // Keys that are persisted (a list's leading phrases) — survive clearSessionCache
   // always, and clearAllCache unless their voice bakes speed into generation
   const persistedKeys = new Set<string>();
   // Fixed app messages (feedback, intro) — survive everything, always

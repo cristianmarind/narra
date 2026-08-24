@@ -23,9 +23,11 @@
       },
       "predictiveBackGestureEnabled": false,
       "permissions": [
-        "android.permission.RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
       ],
-      "package": "com.camd1996.client"
+      "package": "com.narra"
     },
     "web": {
       "output": "static",
@@ -65,8 +67,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "d8672a88-2ff9-4561-bd08-8ef4707192f6"
+        "projectId": "069b1c92-fffd-4766-a3a1-e5cf17dd4fb7"
       }
-    }
+    },
+    "owner": "camd1996"
   }
 }

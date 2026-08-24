@@ -15,9 +15,13 @@ import * as Clipboard from "expo-clipboard";
 import { BreadcrumbBar } from "@/components/breadcrumb-bar";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-import { Brand, Spacing } from "@/constants/theme";
+import { Brand, Radius, Spacing } from "@/constants/theme";
 
-function buildPrompt(topic: string, nativeLang: string, targetLang: string): string {
+function buildPrompt(topic: string, nativeLang: string, targetLang: string, progressive: boolean): string {
+  const progressiveRule = progressive
+    ? "\n- Construye la lista de forma progresiva y acumulativa: empieza por palabras o frases atómicas muy simples, y haz que cada frase nueva reutilice y combine palabras ya introducidas en frases anteriores en vez de meter vocabulario suelto sin relación — por ejemplo, si ya enseñaste \"yo\", \"gustar\" y \"casa\" por separado, la siguiente frase debería ser algo como \"me gusta la casa\" en vez de una frase totalmente nueva. Cada frase debe apoyarse en el vocabulario ya visto para ir aumentando la complejidad gradualmente."
+    : "";
+
   return `Genera una lista de frases para practicar "${topic}" traduciendo de ${nativeLang} a ${targetLang}.
 
 Devuelve SOLO un JSON válido con este formato exacto (sin explicaciones ni markdown):
@@ -36,11 +40,11 @@ Devuelve SOLO un JSON válido con este formato exacto (sin explicaciones ni mark
 }
 
 Reglas:
-- Genera entre 15 y 25 frases relevantes al tema
+- Genera entre 45 y 55 frases relevantes al tema
 - Cada frase debe tener al menos 2 traducciones aceptadas (variaciones naturales)
 - Incluye contracciones y sus formas completas como traducciones separadas (ejemplo: "I'm going" y "I am going", "Where's" y "Where is", "I've" y "I have", etc.)
 - "properNouns" es opcional: inclúyelo solo cuando la traducción contenga nombres propios o palabras que se mantienen en ${nativeLang} (nombres de personas, lugares, marcas); lista ahí esas palabras exactas
-- Las frases deben ser de uso cotidiano y progresivas en dificultad
+- Las frases deben ser de uso cotidiano y progresivas en dificultad${progressiveRule}
 - No incluyas explicaciones, solo el JSON`;
 }
 
@@ -50,11 +54,17 @@ export default function AiHelperScreen() {
   const [nativeLang, setNativeLang] = useState("español");
   const [targetLang, setTargetLang] = useState("inglés");
   const [copied, setCopied] = useState(false);
+  // Like lista-5 (data/default-lists): each phrase reuses vocabulary from
+  // earlier ones instead of introducing unrelated words. On by default —
+  // it's the pattern we want, but some topics (e.g. a fixed list of
+  // greetings) don't need it.
+  const [progressive, setProgressive] = useState(true);
 
   const prompt = buildPrompt(
     topic.trim() || "[tu tema aquí]",
     nativeLang.trim() || "español",
-    targetLang.trim() || "inglés"
+    targetLang.trim() || "inglés",
+    progressive
   );
 
   async function handleCopy() {
@@ -129,6 +139,29 @@ export default function AiHelperScreen() {
                 />
               </View>
             </View>
+
+            <Pressable
+              onPress={() => setProgressive((current) => !current)}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: progressive }}
+              style={({ pressed }) => [styles.checkboxRow, pressed && styles.pressed]}
+            >
+              <View
+                style={[
+                  styles.checkbox,
+                  { borderColor: Brand.accent },
+                  progressive && styles.checkboxActive,
+                ]}
+              >
+                {progressive && <ThemedText style={styles.checkmark}>✓</ThemedText>}
+              </View>
+              <View style={styles.checkboxLabel}>
+                <ThemedText type="small">Vocabulario progresivo</ThemedText>
+                <ThemedText type="small" themeColor="textSecondary">
+                  Cada frase reutiliza palabras de las anteriores, como en "Frases en primera persona"
+                </ThemedText>
+              </View>
+            </Pressable>
           </View>
 
           {/* Generated prompt */}
@@ -233,6 +266,33 @@ const styles = StyleSheet.create({
     borderRadius: Spacing.two,
     padding: Spacing.three,
     fontSize: 16,
+  },
+  checkboxRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: Spacing.two,
+    paddingTop: Spacing.two,
+  },
+  checkbox: {
+    width: 18,
+    height: 18,
+    borderRadius: Radius.sm,
+    borderWidth: 2,
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 2,
+  },
+  checkboxActive: {
+    backgroundColor: Brand.accent,
+  },
+  checkmark: {
+    color: Brand.onPrimary,
+    fontSize: 11,
+    fontWeight: "bold",
+  },
+  checkboxLabel: {
+    flex: 1,
+    gap: 2,
   },
   promptBlock: {
     padding: Spacing.three,

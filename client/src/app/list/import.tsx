@@ -17,6 +17,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { BreadcrumbBar } from "@/components/breadcrumb-bar";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { PERSISTED_PHRASES_PER_LIST } from "@/constants/practice";
 import { Brand, Spacing } from "@/constants/theme";
 import { usePhraseLists } from "@/hooks/use-phrase-lists";
 import { useServices } from "@/services";
@@ -96,10 +97,12 @@ export default function ImportListScreen() {
       // Show success message briefly
       setSuccessMessage(`"${data.name}" importada con ${data.phrases.length} frases`);
 
-      // Pre-generate first phrase audio in background (fire-and-forget)
+      // Pre-generate leading-phrase audio in background (fire-and-forget)
       if (speech.pregeneratePersistent && data.phrases.length > 0) {
-        const firstText = data.phrases[0].acceptedTranslations[0];
-        speech.pregeneratePersistent([firstText], data.targetLanguage).catch(() => {
+        const leadingTexts = data.phrases
+          .slice(0, PERSISTED_PHRASES_PER_LIST)
+          .map((p) => p.acceptedTranslations[0]);
+        speech.pregeneratePersistent(leadingTexts, data.targetLanguage).catch(() => {
           // Silently ignore errors — audio will be generated on demand later
         });
       }

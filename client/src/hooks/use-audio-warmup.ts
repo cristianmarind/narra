@@ -1,13 +1,57 @@
 import { useEffect, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
+import { PERSISTED_PHRASES_PER_LIST } from "@/constants/practice";
 import { fixedPromptsFor } from "@/constants/speech-prompts";
 import { useServices } from "@/services";
 import type { PhraseList } from "@/types";
 
+/** Max lists warmed (persisted leading-phrase audio) per app session — keeps
+ * cold-start cost bounded no matter how many lists the user ends up with
+ * (imported, or seeded/synced from the default-lists manifest). Lists beyond
+ * this cap catch up a few more per app open (see below), or warm themselves
+ * the first time the user actually opens them (speak() already falls back to
+ * the plain voice once and caches in the background). */
+const MAX_WARMED_LISTS = 5;
+
+/**
+ * id -> the list's `updatedAt` at the time its first-phrase audio was
+ * confirmed persisted. Lets a normal app open (nothing new to warm) skip the
+ * persisted-store lookup entirely instead of re-checking every list's audio
+ * on every cold start.
+ */
+const WARMED_STATE_KEY = "audio_warmup_state";
+
+type WarmedState = Record<string, string>;
+
+async function readWarmedState(): Promise<WarmedState> {
+  try {
+    const raw = await AsyncStorage.getItem(WARMED_STATE_KEY);
+    return raw ? (JSON.parse(raw) as WarmedState) : {};
+  } catch {
+    return {};
+  }
+}
+
+async function writeWarmedState(state: WarmedState): Promise<void> {
+  try {
+    await AsyncStorage.setItem(WARMED_STATE_KEY, JSON.stringify(state));
+  } catch {
+    // Worst case: this list gets re-checked (cheaply, on a cache hit) next open
+  }
+}
+
 /**
  * Warms the audio that's always needed as soon as the lobby has its lists:
- * the app's fixed phrases (pinned, permanent) first, then the first phrase
- * of each list (persisted, but may be regenerated on a speed change).
+ * the app's fixed phrases (pinned, permanent) first, then the first
+ * PERSISTED_PHRASES_PER_LIST phrases of up to MAX_WARMED_LISTS lists
+ * (persisted, but may be regenerated on a speed change).
+ *
+ * Lists already confirmed warm at their current `updatedAt` are skipped with
+ * no persisted-store lookup at all. Among the ones still needing it, the
+ * most recently practiced go first — on a fresh install nothing has been
+ * practiced yet, so this reduces to the first MAX_WARMED_LISTS lists in list
+ * order. Any remainder catches up MAX_WARMED_LISTS at a time on later opens.
  *
  * Returns a non-blocking status message for a progress banner, or null when
  * idle/done.
@@ -21,8 +65,9 @@ export function useAudioWarmup(lists: PhraseList[], loading: boolean): string | 
 
     // Fixed app phrases ("Correcto", "Incorrecto", the intro) — pinned so they
     // survive a speed change, and always available no matter which list opens.
-    // No progress banner: these are three short phrases per language, and the
-    // per-list loop below already reports progress for the bulk of the work.
+    // Cheap regardless of how many lists exist (a handful of short phrases
+    // per native language in use), so every list contributes here, not just
+    // the warmed subset below. No progress banner: fast enough not to need one.
     if (speech.pregeneratePinned) {
       const byNativeLang = new Map<string, Set<string>>();
       for (const list of lists) {
@@ -37,55 +82,60 @@ export function useAudioWarmup(lists: PhraseList[], loading: boolean): string | 
 
     if (!speech.pregeneratePersistent) return;
 
-    // { text, language, label } — label is what the warmup banner shows
-    const queue: { text: string; language: string; label: string }[] = [];
-    const seen = new Set<string>();
-
-    const enqueue = (text: string, language: string, label: string) => {
-      if (!text) return;
-      const key = `${language}::${text}`;
-      if (seen.has(key)) return;
-      seen.add(key);
-      queue.push({ text, language, label });
-    };
-
-    for (const list of lists) {
-      if (list.phrases.length === 0) continue;
-      const first = list.phrases[0];
-
-      // Target language: the expected answer, read back during feedback
-      enqueue(first.acceptedTranslations[0], list.targetLanguage, list.name);
-
-      // Native language: the prompt sentence, read at the start of every round.
-      // Warming it here also triggers the Spanish model download up front, so the
-      // first practice round doesn't stall waiting for it.
-      enqueue(first.nativeSentence, list.nativeLanguage, list.name);
-    }
-
-    if (queue.length === 0) return;
-
-    // Batch per language, preserving the order above
-    const byLang = new Map<string, { texts: string[]; labels: string[] }>();
-    for (const item of queue) {
-      const existing = byLang.get(item.language) ?? { texts: [], labels: [] };
-      existing.texts.push(item.text);
-      existing.labels.push(item.label);
-      byLang.set(item.language, existing);
-    }
-
     (async () => {
-      for (const [language, { texts, labels }] of byLang) {
-        await speech.pregeneratePersistent!(texts, language, (current, total, _text, status) => {
-          const label = labels[current - 1];
-          if (status === "generating") {
-            setWarmupStatus(`Configurando: "${label}" (${current}/${total})`);
-          }
-          // Don't show anything for "checking"/"cached" — the store lookup
-          // that decides between them is what's actually running, and on a
-          // cache hit (the common case after the first app open) it's fast
-          // enough that flashing a banner for it is just noise.
-        });
+      const warmed = await readWarmedState();
+
+      // Drop entries for lists that no longer exist, so the record doesn't
+      // grow forever as lists get deleted
+      const liveIds = new Set(lists.map((l) => l.id));
+      let pruned = false;
+      for (const id of Object.keys(warmed)) {
+        if (!liveIds.has(id)) {
+          delete warmed[id];
+          pruned = true;
+        }
       }
+
+      const candidates = lists.filter(
+        (list) => list.phrases.length > 0 && warmed[list.id] !== list.updatedAt
+      );
+      if (candidates.length === 0) {
+        if (pruned) await writeWarmedState(warmed);
+        return;
+      }
+
+      // Most recently practiced first; never-practiced lists (undefined) keep
+      // their original relative order (stable sort) — on a fresh install
+      // that's every list, so this is just "the first N lists".
+      const toWarm = [...candidates]
+        .sort((a, b) => {
+          const at = a.lastPracticedAt ? new Date(a.lastPracticedAt).getTime() : -1;
+          const bt = b.lastPracticedAt ? new Date(b.lastPracticedAt).getTime() : -1;
+          return bt - at;
+        })
+        .slice(0, MAX_WARMED_LISTS);
+
+      for (const list of toWarm) {
+        const leading = list.phrases.slice(0, PERSISTED_PHRASES_PER_LIST);
+        const onProgress = (_current: number, _total: number, _text: string, status: string) => {
+          if (status === "generating") setWarmupStatus(`Configurando: "${list.name}"`);
+        };
+
+        const targets = leading.map((p) => p.acceptedTranslations[0]).filter(Boolean);
+        if (targets.length > 0) {
+          await speech.pregeneratePersistent!(targets, list.targetLanguage, onProgress);
+        }
+        const natives = leading.map((p) => p.nativeSentence).filter(Boolean);
+        if (natives.length > 0) {
+          await speech.pregeneratePersistent!(natives, list.nativeLanguage, onProgress);
+        }
+
+        // Persist after each list (not just at the end) so a session that
+        // gets interrupted mid-warmup still keeps whatever progress it made
+        warmed[list.id] = list.updatedAt;
+        await writeWarmedState(warmed);
+      }
+
       setWarmupStatus(null);
     })();
   }, [loading, lists.length]);

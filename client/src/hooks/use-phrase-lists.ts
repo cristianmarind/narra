@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { PERSISTED_PHRASES_PER_LIST } from "@/constants/practice";
 import { DEFAULT_LISTS } from "@/data/default-lists";
 import { useServices } from "@/services";
 import type {
@@ -18,13 +19,13 @@ import { generateId } from "@/utils";
  */
 const SEEDED_KEY = "default_lists_seeded";
 
-/** Only the first phrase is ever persisted (see the lobby's warmup effect) */
+/** Only the first PERSISTED_PHRASES_PER_LIST phrases are ever persisted (see the lobby's warmup effect) */
 async function forgetPersistedListAudio(speech: SpeechService, list: PhraseList): Promise<void> {
   if (!speech.forgetPersisted || list.phrases.length === 0) return;
-  const first = list.phrases[0];
+  const leading = list.phrases.slice(0, PERSISTED_PHRASES_PER_LIST);
   await Promise.all([
-    speech.forgetPersisted([first.acceptedTranslations[0]], list.targetLanguage),
-    speech.forgetPersisted([first.nativeSentence], list.nativeLanguage),
+    speech.forgetPersisted(leading.map((p) => p.acceptedTranslations[0]), list.targetLanguage),
+    speech.forgetPersisted(leading.map((p) => p.nativeSentence), list.nativeLanguage),
   ]);
 }
 

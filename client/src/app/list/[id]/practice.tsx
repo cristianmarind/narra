@@ -19,6 +19,7 @@ import { ThemedView } from "@/components/themed-view";
 import { AnswerInput } from "@/components/practice/answer-input";
 import { PracticeFeedback } from "@/components/practice/practice-feedback";
 import { TranslationsList } from "@/components/practice/translations-list";
+import { LOOKAHEAD_WINDOW_SIZE } from "@/constants/practice";
 import { Brand, Layout, Radius, Spacing } from "@/constants/theme";
 import {
   FEEDBACK_CORRECT,
@@ -43,11 +44,13 @@ import { homologateSpokenAnswer, playBeep } from "@/utils";
 const TIMER_CORRECT_SECONDS = 3;
 const TIMER_INCORRECT_SECONDS = 15;
 
-/** Max phrases warmed ahead of the current one, per language, at any time */
-const WINDOW_SIZE = 5;
-
 /** Listen mode + self-verify: how long to wait for the user to grade themselves */
 const VERIFY_SECONDS = 10;
+
+/** Listen mode without self-verify: pause after the correct answer finishes
+ * playing, before auto-advancing — gives the user a beat to hear it land.
+ * Pressing "Siguiente" during this pause skips it via the usual handleNext(). */
+const LISTEN_NEXT_DELAY_SECONDS = 2;
 
 /**
  * Words recognized while waiting for a spoken self-verify result. Was
@@ -297,7 +300,7 @@ export default function PracticeScreen() {
         // Only warm the initial lookahead window, not the whole list — the
         // sliding-window effect below keeps it topped up as the user advances
         if (speech.pregenerate) {
-          const lookahead = sessionList.slice(0, WINDOW_SIZE);
+          const lookahead = sessionList.slice(0, LOOKAHEAD_WINDOW_SIZE);
           speech.pregenerate(lookahead.map((p) => p.acceptedTranslations[0]), found.targetLanguage);
           speech.pregenerate(lookahead.map((p) => p.nativeSentence), found.nativeLanguage);
         }
@@ -305,7 +308,7 @@ export default function PracticeScreen() {
     }
   }, [lists, id, status, start, started]);
 
-  // Sliding lookahead window: keeps at most WINDOW_SIZE phrases warmed ahead
+  // Sliding lookahead window: keeps at most LOOKAHEAD_WINDOW_SIZE phrases warmed ahead
   // of the current one, per language. Advancing evicts the phrase that fell
   // behind (unless it's pinned/persisted) and warms the one that just entered
   // the tail of the window.
@@ -313,7 +316,7 @@ export default function PracticeScreen() {
     if (!list || sessionPhrases.length === 0 || status !== "active") return;
 
     const currentIndex = progress.current - 1;
-    // The initial window (indices 0..WINDOW_SIZE-1) is already warmed at session start
+    // The initial window (indices 0..LOOKAHEAD_WINDOW_SIZE-1) is already warmed at session start
     if (currentIndex <= 0) return;
 
     const evictPhrase = sessionPhrases[currentIndex - 1];
@@ -322,7 +325,7 @@ export default function PracticeScreen() {
       speech.forget([evictPhrase.nativeSentence], list.nativeLanguage);
     }
 
-    const enterPhrase = sessionPhrases[currentIndex + WINDOW_SIZE - 1];
+    const enterPhrase = sessionPhrases[currentIndex + LOOKAHEAD_WINDOW_SIZE - 1];
     if (enterPhrase && speech.pregenerate) {
       speech.pregenerate([enterPhrase.acceptedTranslations[0]], list.targetLanguage);
       speech.pregenerate([enterPhrase.nativeSentence], list.nativeLanguage);
@@ -581,7 +584,10 @@ export default function PracticeScreen() {
       if (selfVerify) {
         startVerifyWait();
       } else {
-        finishListenPhrase(null);
+        // Brief pause before auto-advancing; the countdown effect below
+        // calls finishListenPhrase() when it elapses. "Siguiente" still
+        // cancels it immediately via handleNext()'s own stopTimer().
+        startTimer(LISTEN_NEXT_DELAY_SECONDS);
       }
     });
   }
@@ -670,6 +676,10 @@ export default function PracticeScreen() {
       stopTimer();
       if (listening) stopListening();
       // Timed out without a self-report: nothing to record, just move on
+      finishListenPhrase(null);
+    } else if (listenStage === "answer-playing") {
+      // Post-answer pause elapsed (self-verify off) — advance on its own
+      stopTimer();
       finishListenPhrase(null);
     }
   }, [countdown]);
