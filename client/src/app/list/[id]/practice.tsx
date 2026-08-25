@@ -1,3 +1,4 @@
+import { useKeepAwake } from "expo-keep-awake";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -147,6 +148,11 @@ const COMMAND_CONTEXT = [
 ];
 
 export default function PracticeScreen() {
+  // Listen mode has long stretches with no touch input (the user just
+  // listens/thinks), so the OS would otherwise dim and lock the screen
+  // mid-session. Active only while this screen is mounted.
+  useKeepAwake();
+
   const {
     id,
     mode: modeParam,
