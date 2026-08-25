@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { usePathname } from "expo-router";
 import {
   Modal,
   Pressable,
@@ -8,6 +9,7 @@ import {
 } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
+import { TermsContent } from "@/components/terms-content";
 import { Brand, Radius, Spacing } from "@/constants/theme";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useTermsAcceptance } from "@/hooks/use-terms-acceptance";
@@ -15,10 +17,14 @@ import { useTermsAcceptance } from "@/hooks/use-terms-acceptance";
 export function TermsModal() {
   const { colors } = useAppTheme();
   const { accepted, acceptTerms } = useTermsAcceptance();
+  const pathname = usePathname();
   const [agreed, setAgreed] = useState(false);
   const [isAccepting, setIsAccepting] = useState(false);
 
-  if (accepted) return null;
+  // The standalone /terms page is the public, checkbox-free version of this
+  // same text — meant to be linkable from outside the app. Gating it behind
+  // this modal would defeat that purpose.
+  if (accepted || pathname === "/terms") return null;
 
   async function handleAccept() {
     if (!agreed) return;
@@ -39,54 +45,7 @@ export function TermsModal() {
               Términos y Condiciones
             </ThemedText>
 
-            <ThemedText type="small" themeColor="textSecondary" style={styles.section}>
-              <ThemedText type="small" style={{ fontWeight: "600" }}>
-                Privacidad
-              </ThemedText>
-              {"\n"}
-              Narra no recopila datos personales. Toda tu información (listas, estadísticas,
-              preferencias) se almacena localmente en tu dispositivo. No hay servidor backend que
-              acceda a tus datos.
-            </ThemedText>
-
-            <ThemedText type="small" themeColor="textSecondary" style={styles.section}>
-              <ThemedText type="small" style={{ fontWeight: "600" }}>
-                Publicidad
-              </ThemedText>
-              {"\n"}
-              La app contiene:
-              {"\n"}• Frases patrocinadas (prácticas como cualquier otra, sin impactar tu
-              puntuación)
-              {"\n"}• Anuncios de AdMob (Google Mobile Ads) — Google puede recopilar datos
-              anónimos para personalizar anuncios según su política de privacidad.
-            </ThemedText>
-
-            <ThemedText type="small" themeColor="textSecondary" style={styles.section}>
-              <ThemedText type="small" style={{ fontWeight: "600" }}>
-                Generador de IA
-              </ThemedText>
-              {"\n"}
-              Las listas generadas con IA usan prompts que envías a ChatGPT, Claude, Gemini u
-              otro servicio de terceros. Narra no interviene en esa comunicación.
-            </ThemedText>
-
-            <ThemedText type="small" themeColor="textSecondary" style={styles.section}>
-              <ThemedText type="small" style={{ fontWeight: "600" }}>
-                Limitación de Responsabilidad
-              </ThemedText>
-              {"\n"}
-              Narra se proporciona "tal cual". No somos responsables de pérdida de datos,
-              problemas de compatibilidad o daños derivados del uso.
-            </ThemedText>
-
-            <ThemedText type="small" themeColor="textSecondary" style={styles.section}>
-              <ThemedText type="small" style={{ fontWeight: "600" }}>
-                Cambios
-              </ThemedText>
-              {"\n"}
-              Podemos actualizar estos términos en cualquier momento. Notificaremos requiriendo
-              nueva aceptación.
-            </ThemedText>
+            <TermsContent />
           </ScrollView>
 
           <View style={styles.footer}>
@@ -152,9 +111,6 @@ const styles = StyleSheet.create({
   },
   title: {
     marginBottom: Spacing.two,
-  },
-  section: {
-    lineHeight: 20,
   },
   footer: {
     gap: Spacing.three,

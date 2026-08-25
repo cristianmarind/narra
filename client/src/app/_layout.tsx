@@ -143,6 +143,7 @@ function RootLayoutInner() {
               name="list/[id]/results"
               options={{ title: "Resultados", headerShown: false }}
             />
+            <Stack.Screen name="terms" options={{ title: "Términos y Condiciones" }} />
           </Stack>
         </View>
       </View>
