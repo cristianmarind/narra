@@ -7,6 +7,9 @@
     "icon": "./assets/images/icon.png",
     "scheme": "narra",
     "userInterfaceStyle": "automatic",
+    "web": {
+      "baseUrl": "/narra/"
+    },
     "ios": {
       "icon": "./assets/images/icon.png",
       "infoPlist": {
