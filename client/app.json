@@ -7,9 +7,6 @@
     "icon": "./assets/images/icon.png",
     "scheme": "narra",
     "userInterfaceStyle": "automatic",
-    "web": {
-      "baseUrl": "/narra/"
-    },
     "ios": {
       "icon": "./assets/images/icon.png",
       "infoPlist": {
@@ -34,7 +31,8 @@
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/favicon.png",
+      "baseUrl": "/narra/"
     },
     "plugins": [
       "expo-router",
