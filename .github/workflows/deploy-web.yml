@@ -2,7 +2,7 @@ name: Deploy web to GitHub Pages
 
 on:
   push:
-    branches: [ master ]
+    branches: [ improve/initial-refactors]
   workflow_dispatch:
 
 permissions:
