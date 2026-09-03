@@ -44,6 +44,12 @@ interface PhraseListsContextValue {
   addUserTranslation: (listId: string, phraseId: string, translation: string) => Promise<void>;
   /** Increment correct/incorrect stats for a phrase */
   recordPhraseResult: (listId: string, phraseId: string, isCorrect: boolean) => Promise<void>;
+  /**
+   * User-triggered check for new/updated default lists (pull-to-refresh, a
+   * manual button) — bypasses the manifest's 24h cache. Resolves to how many
+   * lists were added or updated, for UI feedback.
+   */
+  checkForListUpdates: () => Promise<number>;
 }
 
 const PhraseListsContext = createContext<PhraseListsContextValue | null>(null);
@@ -97,10 +103,15 @@ export function PhraseListsProvider({ children }: { children: React.ReactNode })
    * place (matched by `defaultListId`, preserving progress via
    * mergeDefaultListPhrases) or seeds a brand-new one when the manifest
    * entry's id hasn't been seen before. Silent no-op offline or unconfigured.
+   *
+   * `force` skips the manifest's 24h cache — used for the user-triggered
+   * "check for updates" action, where the auto-sync-on-launch cache-first
+   * behavior would otherwise make the button/pull-to-refresh feel broken.
+   * Returns how many lists were added or updated, for UI feedback.
    */
-  const syncDefaultLists = useCallback(async () => {
-    const updates = await defaultLists.checkForUpdates();
-    if (updates.length === 0) return;
+  const syncDefaultLists = useCallback(async (force = false) => {
+    const updates = await defaultLists.checkForUpdates({ force });
+    if (updates.length === 0) return 0;
 
     const current = await storage.getLists();
     const now = new Date().toISOString();
@@ -135,7 +146,11 @@ export function PhraseListsProvider({ children }: { children: React.ReactNode })
     }
     await defaultLists.markApplied(updates.map(({ id, updatedAt }) => ({ id, updatedAt })));
     await refresh();
+    return updates.length;
   }, [defaultLists, storage, refresh]);
+
+  /** Public, user-triggered version of syncDefaultLists — always bypasses the cache. */
+  const checkForListUpdates = useCallback(() => syncDefaultLists(true), [syncDefaultLists]);
 
   useEffect(() => {
     (async () => {
@@ -345,6 +360,7 @@ export function PhraseListsProvider({ children }: { children: React.ReactNode })
     setListPreference,
     addUserTranslation,
     recordPhraseResult,
+    checkForListUpdates,
   };
 
   return React.createElement(PhraseListsContext.Provider, { value }, children);

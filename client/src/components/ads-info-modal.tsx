@@ -161,7 +161,13 @@ const styles = StyleSheet.create({
     padding: Spacing.one,
   },
   body: {
-    flexShrink: 1,
+    // flex (not just flexShrink) + minHeight: 0 is what actually lets this
+    // shrink below its content height on every platform — flex children
+    // default to a minimum height of "as tall as my content", which on some
+    // devices silently defeats the dialog's maxHeight and stops the
+    // ScrollView from ever needing to (or being able to) scroll internally.
+    flex: 1,
+    minHeight: 0,
   },
   bodyContent: {
     padding: Spacing.four,

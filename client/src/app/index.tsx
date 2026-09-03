@@ -1,6 +1,6 @@
 import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useMemo } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { BreadcrumbBar } from "@/components/breadcrumb-bar";
@@ -18,7 +18,7 @@ import { useServices } from "@/services";
 import { formatRelativeTime } from "@/utils";
 
 export default function HomeScreen() {
-  const { lists, loading } = usePhraseLists();
+  const { lists, loading, checkForListUpdates } = usePhraseLists();
   const { speech } = useServices();
   const { isCompact, gridColumns } = useBreakpoint();
   const { colors } = useAppTheme();
@@ -27,6 +27,40 @@ export default function HomeScreen() {
   // Non-blocking warmup indicator; warms the audio that's always needed as
   // soon as the lists are ready
   const warmupStatus = useAudioWarmup(lists, loading);
+
+  // Manual "check for updates": pull-to-refresh (touch) and a button
+  // (desktop/no-touch) both drive the same state. The auto-sync on launch is
+  // cache-first (24h) — this bypasses that so the action never feels like a
+  // no-op just because it ran recently.
+  const [checkingUpdates, setCheckingUpdates] = useState(false);
+  const [updatesMessage, setUpdatesMessage] = useState<string | null>(null);
+  const messageTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleCheckForUpdates = useCallback(async () => {
+    if (checkingUpdates) return;
+    setCheckingUpdates(true);
+    setUpdatesMessage(null);
+    try {
+      const count = await checkForListUpdates();
+      setUpdatesMessage(
+        count > 0
+          ? `✓ ${count} ${count === 1 ? "lista actualizada" : "listas actualizadas"}`
+          : "Ya estás al día"
+      );
+    } catch {
+      setUpdatesMessage("No se pudo buscar actualizaciones");
+    } finally {
+      setCheckingUpdates(false);
+      if (messageTimeoutRef.current) clearTimeout(messageTimeoutRef.current);
+      messageTimeoutRef.current = setTimeout(() => setUpdatesMessage(null), 3500);
+    }
+  }, [checkingUpdates, checkForListUpdates]);
+
+  useEffect(() => {
+    return () => {
+      if (messageTimeoutRef.current) clearTimeout(messageTimeoutRef.current);
+    };
+  }, []);
 
   // Returning home ends any list/practice flow: abandon their still-queued
   // warmups and drop the session cache (pinned/persisted entries survive).
@@ -85,7 +119,12 @@ export default function HomeScreen() {
             </Pressable>
           </View>
         ) : (
-          <ScrollView contentContainerStyle={styles.scrollContent}>
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            refreshControl={
+              <RefreshControl refreshing={checkingUpdates} onRefresh={handleCheckForUpdates} />
+            }
+          >
             <ContentContainer>
               {/* Title lives in the breadcrumb / header; only the meta line here
                   so it isn't repeated twice on the same screen */}
@@ -94,6 +133,30 @@ export default function HomeScreen() {
                   {lists.length} {lists.length === 1 ? "lista" : "listas"}
                   {lastActivity ? ` · última práctica ${lastActivity}` : ""}
                 </Text>
+
+                {/* Pull-to-refresh covers touch devices; this covers mouse/desktop,
+                    where there's no gesture to pull down on. */}
+                <View style={styles.updatesRow}>
+                  <Pressable
+                    onPress={handleCheckForUpdates}
+                    disabled={checkingUpdates}
+                    accessibilityLabel="Buscar actualizaciones de listas"
+                    style={({ pressed }) => [
+                      styles.updatesButton,
+                      pressed && styles.pressed,
+                      checkingUpdates && styles.disabled,
+                    ]}
+                  >
+                    <Text style={[styles.updatesButtonText, { color: colors.textMuted }]}>
+                      {checkingUpdates ? "Buscando…" : "↻ Buscar actualizaciones"}
+                    </Text>
+                  </Pressable>
+                  {updatesMessage && (
+                    <Text style={[styles.updatesMessage, { color: colors.textMuted }]}>
+                      {updatesMessage}
+                    </Text>
+                  )}
+                </View>
               </View>
 
               <View style={styles.grid}>
@@ -160,6 +223,21 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 11,
   },
+  updatesRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.two,
+  },
+  updatesButton: {
+    alignSelf: "flex-start",
+  },
+  updatesButtonText: {
+    fontSize: 11,
+    fontWeight: "600",
+  },
+  updatesMessage: {
+    fontSize: 11,
+  },
   grid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -215,5 +293,8 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.7,
+  },
+  disabled: {
+    opacity: 0.5,
   },
 });

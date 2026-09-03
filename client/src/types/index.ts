@@ -103,8 +103,12 @@ export interface DefaultListsService {
    * changed — already fetched and validated — keyed by manifest id. Never
    * throws; resolves to [] on any failure (offline, malformed, no manifest
    * URL configured, etc).
+   *
+   * Pass `force: true` to skip the cached manifest even if it's still within
+   * its TTL — for a user-triggered "check for updates" action, where serving
+   * a possibly-stale cache would defeat the point of asking.
    */
-  checkForUpdates(): Promise<{ id: string; updatedAt: string; def: DefaultListDef }[]>;
+  checkForUpdates(options?: { force?: boolean }): Promise<{ id: string; updatedAt: string; def: DefaultListDef }[]>;
   /**
    * Records that the given manifest entries were successfully applied
    * locally, so they aren't reported as changed again next time. Call only

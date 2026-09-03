@@ -84,7 +84,11 @@ const styles = StyleSheet.create({
     // Lets the ScrollView shrink to whatever space is left under the header
     // once the dialog hits its maxHeight, instead of pushing the dialog
     // taller than the screen — that's what makes the content scrollable.
-    flexShrink: 1,
+    // minHeight: 0 overrides the flex default of "at least as tall as my
+    // content" — without it, some devices size this to the content instead
+    // of the available space, and the ScrollView never actually scrolls.
+    flex: 1,
+    minHeight: 0,
   },
   bodyContent: {
     padding: Spacing.four,

@@ -53,9 +53,9 @@ const ADS_REGISTRY = {
 
 const DEFAULT_LISTS = {
   "lista-1": {
-    "updatedAt": "2026-08-27T00:00:00.000Z",
+    "updatedAt": "2026-08-22T00:00:00.000Z",
     "def": {
-      "name": "Básico singular",
+      "name": "Inglés básico - Nivel 1 (Sin conocimientos)",
       "nativeLanguage": "español",
       "targetLanguage": "inglés",
       "showTranslation": true,
@@ -73,27 +73,7 @@ const DEFAULT_LISTS = {
           ]
         },
         {
-          "nativeSentence": "Soy o Yo soy",
-          "acceptedTranslations": [
-            "I am",
-            "I'm"
-          ]
-        },
-        {
-          "nativeSentence": "Eres o Tú eres",
-          "acceptedTranslations": [
-            "You are"
-          ]
-        },
-        {
-          "nativeSentence": "Estoy o Yo estoy",
-          "acceptedTranslations": [
-            "I am",
-            "I'm"
-          ]
-        },
-        {
-          "nativeSentence": "Él, refiriendose a un hombre",
+          "nativeSentence": "Él",
           "acceptedTranslations": [
             "He"
           ]
@@ -105,82 +85,37 @@ const DEFAULT_LISTS = {
           ]
         },
         {
-          "nativeSentence": "Eso, refiriendose a un objeto o un animal",
-          "acceptedTranslations": [
-            "It"
-          ]
-        },
-        {
-          "nativeSentence": "Él es o Él está",
-          "acceptedTranslations": [
-            "He is"
-          ]
-        },
-        {
-          "nativeSentence": "Ella es o Ella está",
-          "acceptedTranslations": [
-            "She is"
-          ]
-        },
-        {
-          "nativeSentence": "Eso es o Eso está",
-          "acceptedTranslations": [
-            "It is"
-          ]
-        },
-        {
-          "nativeSentence": "Juan es o Juan está",
-          "acceptedTranslations": [
-            "Juan is"
-          ]
-        },
-        {
-          "nativeSentence": "Sofia es o Sofia está",
-          "acceptedTranslations": [
-            "Sofia is"
-          ]
-        },
-        {
-          "nativeSentence": "El perro",
-          "acceptedTranslations": [
-            "The dog"
-          ]
-        },
-        {
-          "nativeSentence": "La casa",
-          "acceptedTranslations": [
-            "The house"
-          ]
-        },
-        {
-          "nativeSentence": "Un o Una",
+          "nativeSentence": "Un",
           "acceptedTranslations": [
             "A",
             "An"
           ]
         },
         {
-          "nativeSentence": "La casa y el perro",
+          "nativeSentence": "Una",
           "acceptedTranslations": [
-            "The house and the dog"
+            "A",
+            "An"
           ]
         },
         {
-          "nativeSentence": "Una persona y un animal",
+          "nativeSentence": "El / La",
           "acceptedTranslations": [
-            "A person and an animal"
+            "The"
           ]
         },
         {
-          "nativeSentence": "Una casa y una aplicación",
+          "nativeSentence": "Soy / Estoy",
           "acceptedTranslations": [
-            "A house and an application"
+            "I am",
+            "I'm"
           ]
         },
         {
-          "nativeSentence": "Sofia está en la casa",
+          "nativeSentence": "Es / Está",
           "acceptedTranslations": [
-            "Sofia is in the house",
+            "Is",
+            "'s"
           ]
         },
         {
@@ -250,12 +185,6 @@ const DEFAULT_LISTS = {
           ]
         },
         {
-          "nativeSentence": "El chocolate y un hospital o una casa",
-          "acceptedTranslations": [
-            "The chocolate and a hospital or a house"
-          ]
-        },
-        {
           "nativeSentence": "Soy un doctor.",
           "acceptedTranslations": [
             "I am a doctor.",
@@ -294,9 +223,9 @@ const DEFAULT_LISTS = {
     }
   },
   "lista-2": {
-    "updatedAt": "2026-08-27T00:00:00.000Z",
+    "updatedAt": "2026-08-22T00:00:00.000Z",
     "def": {
-      "name": "Básico plural",
+      "name": "Inglés básico - Nivel 2 (Principiante)",
       "nativeLanguage": "español",
       "targetLanguage": "inglés",
       "phrases": [
@@ -313,14 +242,14 @@ const DEFAULT_LISTS = {
           ]
         },
         {
-          "nativeSentence": "Somos o Estamos",
+          "nativeSentence": "Somos / Estamos",
           "acceptedTranslations": [
             "We are",
             "We're"
           ]
         },
         {
-          "nativeSentence": "Son o Están",
+          "nativeSentence": "Son / Están",
           "acceptedTranslations": [
             "They are",
             "They're"
@@ -331,20 +260,6 @@ const DEFAULT_LISTS = {
           "acceptedTranslations": [
             "House",
             "Home"
-          ]
-        },
-        {
-          "nativeSentence": "Nosotros estamos en casa.",
-          "acceptedTranslations": [
-            "We are at home.",
-            "We're at home."
-          ]
-        },
-        {
-          "nativeSentence": "Ellos son estudiantes.",
-          "acceptedTranslations": [
-            "They are students.",
-            "They're students."
           ]
         },
         {
@@ -368,40 +283,9 @@ const DEFAULT_LISTS = {
           ]
         },
         {
-          "nativeSentence": "Mi trabajo",
-          "acceptedTranslations": [
-            "My job"
-          ]
-        },
-        {
           "nativeSentence": "Amigo",
           "acceptedTranslations": [
             "Friend"
-          ]
-        },
-        {
-          "nativeSentence": "Mi amigo",
-          "acceptedTranslations": [
-            "My friend"
-          ]
-        },
-        {
-          "nativeSentence": "Mi casa",
-          "acceptedTranslations": [
-            "My house",
-            "My home"
-          ]
-        },
-        {
-          "nativeSentence": "El es mi amigo.",
-          "acceptedTranslations": [
-            "He is my friend."
-          ]
-        },
-        {
-          "nativeSentence": "Ellos son mis amigos.",
-          "acceptedTranslations": [
-            "They are my friends."
           ]
         },
         {
@@ -438,39 +322,89 @@ const DEFAULT_LISTS = {
           ]
         },
         {
-          "nativeSentence": "Mi familia esta casa.",
+          "nativeSentence": "Mi amigo tiene un carro.",
           "acceptedTranslations": [
-            "My family is at home.",
+            "My friend has a car.",
+            "My friend has an automobile."
           ]
         },
         {
-          "nativeSentence": "Estamos en el trabajo.",
+          "nativeSentence": "Ella tiene un perro.",
           "acceptedTranslations": [
-            "We are at work.",
-            "We're at work."
+            "She has a dog.",
+            "She's got a dog."
           ]
         },
         {
-          "nativeSentence": "Ellos y ella estan en el hospital.",
+          "nativeSentence": "Él tiene un gato.",
           "acceptedTranslations": [
-            "They and she are at the hospital.",
-            "They're at the hospital with her."
+            "He has a cat.",
+            "He's got a cat."
           ]
         },
         {
-          "nativeSentence": "Nosotros y el estamos en el hospital.",
+          "nativeSentence": "Me gusta la comida.",
           "acceptedTranslations": [
-            "We and he are at the hospital.",
-            "We're at the hospital with him."
+            "I like food.",
+            "I enjoy food."
           ]
         },
+        {
+          "nativeSentence": "Quiero ir a casa.",
+          "acceptedTranslations": [
+            "I want to go home.",
+            "I'd like to go home."
+          ]
+        },
+        {
+          "nativeSentence": "Necesitamos un doctor.",
+          "acceptedTranslations": [
+            "We need a doctor.",
+            "We need the doctor."
+          ]
+        },
+        {
+          "nativeSentence": "Ellos trabajan en un hospital.",
+          "acceptedTranslations": [
+            "They work at a hospital.",
+            "They're working at a hospital."
+          ]
+        },
+        {
+          "nativeSentence": "Mi familia vive en esta casa.",
+          "acceptedTranslations": [
+            "My family lives in this house.",
+            "My family lives in this home."
+          ]
+        },
+        {
+          "nativeSentence": "Ella está en el hotel con su familia.",
+          "acceptedTranslations": [
+            "She is at the hotel with her family.",
+            "She's at the hotel with her family."
+          ]
+        },
+        {
+          "nativeSentence": "Nos gusta escuchar música.",
+          "acceptedTranslations": [
+            "We like listening to music.",
+            "We like to listen to music."
+          ]
+        },
+        {
+          "nativeSentence": "Estamos listos para comenzar.",
+          "acceptedTranslations": [
+            "We are ready to start.",
+            "We're ready to start."
+          ]
+        }
       ]
     }
   },
   "lista-3": {
-    "updatedAt": "2026-08-27T00:00:00.000Z",
+    "updatedAt": "2026-08-22T00:00:00.000Z",
     "def": {
-      "name": "Preguntas y respuestas básicas",
+      "name": "Inglés básico - Nivel 3 (Intermedio)",
       "nativeLanguage": "español",
       "targetLanguage": "inglés",
       "phrases": [
@@ -482,374 +416,180 @@ const DEFAULT_LISTS = {
           ]
         },
         {
-          "nativeSentence": "Soy estudiante de ingles.",
+          "nativeSentence": "Trabajo como ingeniero de software.",
           "acceptedTranslations": [
-            "I am a student of English.",
-            "I study English."
+            "I work as a software engineer.",
+            "I'm a software engineer."
           ]
         },
         {
-          "nativeSentence": "¿Como te llamas?",
+          "nativeSentence": "¿Cuánto tiempo llevas estudiando inglés?",
           "acceptedTranslations": [
-            "What is your name?",
-            "What should I call you?"
+            "How long have you been studying English?",
+            "How long have you studied English?"
           ]
         },
         {
-          "nativeSentence": "Mi nombre es Michel.",
+          "nativeSentence": "He estado aprendiendo inglés durante dos años.",
           "acceptedTranslations": [
-            "My name is Michel.",
-            "I am Michel."
+            "I've been learning English for two years.",
+            "I have been learning English for two years."
           ]
         },
         {
-          "nativeSentence": "¿Como se llama ella?",
+          "nativeSentence": "Normalmente me levanto temprano.",
           "acceptedTranslations": [
-            "What is her name?",
-            "What should I call her?"
+            "I usually wake up early.",
+            "I normally wake up early."
           ]
         },
         {
-          "nativeSentence": "Ella se llama Sofia.",
+          "nativeSentence": "Estoy trabajando en un proyecto nuevo.",
           "acceptedTranslations": [
-            "Her name is Sofia.",
-            "I call her Sofia."
+            "I'm working on a new project.",
+            "I am working on a new project."
           ]
         },
         {
-          "nativeSentence": "¿Como se llama él?",
+          "nativeSentence": "Ayer terminé mi trabajo temprano.",
           "acceptedTranslations": [
-            "What is his name?",
-            "What should I call him?"
+            "I finished my work early yesterday.",
+            "Yesterday I finished my work early."
           ]
         },
         {
-          "nativeSentence": "El se llama Juan.",
+          "nativeSentence": "¿Has visitado otro país alguna vez?",
           "acceptedTranslations": [
-            "His name is Juan.",
-            "I call him Juan."
+            "Have you ever visited another country?",
+            "Have you ever been to another country?"
           ]
         },
         {
-          "nativeSentence": "¿Cuantos años tienes?",
+          "nativeSentence": "Todavía no he terminado.",
           "acceptedTranslations": [
-            "How old are you?",
-            "What is your age?"
+            "I haven't finished yet.",
+            "I have not finished yet."
           ]
         },
         {
-          "nativeSentence": "Tengo 30 años.",
+          "nativeSentence": "¿Podrías ayudarme con este problema?",
           "acceptedTranslations": [
-            "I am 30 years old.",
-            "I'm 30."
+            "Could you help me with this problem?",
+            "Can you help me with this problem?"
           ]
         },
         {
-          "nativeSentence": "¿Cuantos años tiene Hernan?",
+          "nativeSentence": "Si tengo tiempo, iré contigo.",
           "acceptedTranslations": [
-            "How old is Hernan?",
-            "What is Hernan's age?"
+            "If I have time, I'll go with you.",
+            "If I have time, I will go with you."
           ]
         },
         {
-          "nativeSentence": "Hernan tiene 69 años.",
+          "nativeSentence": "Creo que esta es la mejor opción.",
           "acceptedTranslations": [
-            "Hernan is 69 years old.",
-            "Hernan is 69."
+            "I think this is the best option.",
+            "I believe this is the best option."
           ]
         },
         {
-          "nativeSentence": "¿De donde eres?",
+          "nativeSentence": "Prefiero trabajar desde casa.",
           "acceptedTranslations": [
-            "Where are you from?",
-            "What is your origin?"
+            "I prefer working from home.",
+            "I prefer to work from home."
           ]
         },
         {
-          "nativeSentence": "Soy de Colombia.",
+          "nativeSentence": "Siempre intento aprender algo nuevo.",
           "acceptedTranslations": [
-            "I am from Colombia.",
-            "I come from Colombia."
+            "I always try to learn something new.",
+            "I always try learning something new."
           ]
         },
         {
-          "nativeSentence": "¿De donde son tus amigos?",
+          "nativeSentence": "¿Qué harías en esta situación?",
           "acceptedTranslations": [
-            "Where are your friends from?",
-            "What is the origin of your friends?"
+            "What would you do in this situation?",
+            "What would you do if you were in this situation?"
           ]
         },
         {
-          "nativeSentence": "Mis amigos son de España.",
+          "nativeSentence": "Es importante mantener la calma.",
           "acceptedTranslations": [
-            "My friends are from Spain.",
-            "I come from Spain."
+            "It's important to stay calm.",
+            "It is important to remain calm."
           ]
         },
         {
-          "nativeSentence": "¿Donde esta el baño?",
+          "nativeSentence": "No estoy seguro de la respuesta.",
           "acceptedTranslations": [
-            "Where is the bathroom?",
-            "Can you show me the way to the bathroom?"
+            "I'm not sure about the answer.",
+            "I am not sure about the answer."
           ]
         },
         {
-          "nativeSentence": "El baño esta a la derecha.",
+          "nativeSentence": "Podemos resolver este problema juntos.",
           "acceptedTranslations": [
-            "The bathroom is on the right.",
-            "It's on the right."
+            "We can solve this problem together.",
+            "We can figure this problem out together."
           ]
         },
         {
-          "nativeSentence": "El baño esta a la izquierda.",
+          "nativeSentence": "Me habría gustado saber eso antes.",
           "acceptedTranslations": [
-            "The bathroom is on the left.",
-            "It's on the left."
+            "I wish I had known that earlier.",
+            "I would've liked to know that sooner."
           ]
         },
         {
-          "nativeSentence": "El cuarto esta a la izquierda.",
+          "nativeSentence": "Cuanto más practico, más confianza tengo.",
           "acceptedTranslations": [
-            "The room is on the left.",
-            "It's on the left."
+            "The more I practice, the more confident I become.",
+            "The more I practice, the more confidence I have."
           ]
         },
         {
-          "nativeSentence": "El museo esta a la izquierda.",
+          "nativeSentence": "Aunque fue difícil, nunca me rendí.",
           "acceptedTranslations": [
-            "The museum is on the left.",
-            "It's on the left."
+            "Even though it was difficult, I never gave up.",
+            "Although it was hard, I never gave up."
           ]
         },
         {
-          "nativeSentence": "Somos de latino america.",
+          "nativeSentence": "Estoy buscando una oportunidad para crecer profesionalmente.",
           "acceptedTranslations": [
-            "We are from Latin America.",
+            "I'm looking for an opportunity to grow professionally.",
+            "I am looking for a chance to grow professionally."
           ]
         },
         {
-          "nativeSentence": "¿Hace cuanto estas en Colombia?",
+          "nativeSentence": "¿Puedes explicarlo de otra manera?",
           "acceptedTranslations": [
-            "How long have you been in Colombia?"
+            "Can you explain it in another way?",
+            "Could you explain it differently?"
           ]
         },
         {
-          "nativeSentence": "¿Hace cuanto eres ingeniero?",
+          "nativeSentence": "Estoy de acuerdo contigo.",
           "acceptedTranslations": [
-            "How long have you been an engineer?"
+            "I agree with you.",
+            "I completely agree with you."
           ]
         },
         {
-          "nativeSentence": "¿Hace cuanto llegaste?",
+          "nativeSentence": "Eso tiene mucho sentido.",
           "acceptedTranslations": [
-            "How long have you been here?"
-          ]
-        },
-        {
-          "nativeSentence": "Estoy en Colombia desde hace 3 años.",
-          "acceptedTranslations": [
-            "I have been in Colombia for 3 years.",
-            "I have been in Colombia for three years."
-          ]
-        },
-        {
-          "nativeSentence": "¿Como se llama el?",
-          "acceptedTranslations": [
-            "What is his name?"
-          ]
-        },
-        {
-          "nativeSentence": "Tu perro es lindo.",
-          "acceptedTranslations": [
-            "Your dog is cute."
-          ]
-        },
-        {
-          "nativeSentence": "Tu casa",
-          "acceptedTranslations": [
-            "Your house"
-          ]
-        },
-        {
-          "nativeSentence": "Tu amigo",
-          "acceptedTranslations": [
-            "Your friend"
-          ]
-        },
-        {
-          "nativeSentence": "¿Como se llama tu perro?",
-          "acceptedTranslations": [
-            "What is your dog's name?"
-          ]
-        },
-        {
-          "nativeSentence": "¿Como se llama tu hospital?",
-          "acceptedTranslations": [
-            "What is your hospital's name?"
-          ]
-        },
-        {
-          "nativeSentence": "¿Como se llama el perro?",
-          "acceptedTranslations": [
-            "What is the dog's name?"
-          ]
-        },
-        {
-          "nativeSentence": "Mi perro se llama Malú.",
-          "acceptedTranslations": [
-            "My dog's name is Malú."
-          ]
-        },
-        {
-          "nativeSentence": "El perro se llama Kira.",
-          "acceptedTranslations": [
-            "The dog's name is Kira."
-          ]
-        },
-        {
-          "nativeSentence": "El carro de mi hermano es bonito.",
-          "acceptedTranslations": [
-            "My brother's car is nice."
-          ]
-        },
-        {
-          "nativeSentence": "La casa de mi hermana es grande.",
-          "acceptedTranslations": [
-            "My sister's house is big."
+            "That makes a lot of sense.",
+            "That makes sense."
           ]
         }
-      ]
-    }
-  },
-  "lista-3-1": {
-    "updatedAt": "2026-08-27T00:00:00.000Z",
-    "def": {
-      "name": "Posesión y Haber",
-      "nativeLanguage": "español",
-      "targetLanguage": "inglés",
-      "phrases": [
-        {
-          "nativeSentence": "Tengo un celular.",
-          "acceptedTranslations": [
-            "I have a cell phone."
-          ]
-        },
-        {
-          "nativeSentence": "Tengo un carro.",
-          "acceptedTranslations": [
-            "I have a car."
-          ]
-        },
-        {
-          "nativeSentence": "Tengo una casa.",
-          "acceptedTranslations": [
-            "I have a house."
-          ]
-        },
-        {
-          "nativeSentence": "Tengo un animal.",
-          "acceptedTranslations": [
-            "I have an animal."
-          ]
-        },
-        {
-          "nativeSentence": "Tengo una mascota.",
-          "acceptedTranslations": [
-            "I have a pet."
-          ]
-        },
-        {
-          "nativeSentence": "He estudiado ingles.",
-          "acceptedTranslations": [
-            "I have studied English."
-          ]
-        },
-        {
-          "nativeSentence": "Estudio ingles.",
-          "acceptedTranslations": [
-            "I study English."
-          ]
-        },
-        {
-          "nativeSentence": "He estudiado y tengo un perro.",
-          "acceptedTranslations": [
-            "I have studied and I have a dog."
-          ]
-        },
-        {
-          "nativeSentence": "Tengo una mascota y he estudiado.",
-          "acceptedTranslations": [
-            "I have a pet and I have studied."
-          ]
-        },
-        {
-          "nativeSentence": "El tiene un celular.",
-          "acceptedTranslations": [
-            "He has a cell phone."
-          ]
-        },
-        {
-          "nativeSentence": "Ella tiene un carro.",
-          "acceptedTranslations": [
-            "She has a car."
-          ]
-        },
-        {
-          "nativeSentence": "Tengo un carro y el tiene un celular.",
-          "acceptedTranslations": [
-            "I have a car and he has a cell phone."
-          ]
-        },
-        {
-          "nativeSentence": "Ella tiene un amigo y yo tengo un perro.",
-          "acceptedTranslations": [
-            "She has a friend and I have a dog."
-          ]
-        },
-        {
-          "nativeSentence": "Ella ha estudiado.",
-          "acceptedTranslations": [
-            "She has studied."
-          ]
-        },
-        {
-          "nativeSentence": "El ha estudiado y tiene un carro.",
-          "acceptedTranslations": [
-            "He has studied and he has a car."
-          ]
-        },
-        {
-          "nativeSentence": "Estudio ingles y el ha estudiado ingles.",
-          "acceptedTranslations": [
-            "I study English and he has studied English."
-          ]
-        },
-        {
-          "nativeSentence": "El tiene un libro.",
-          "acceptedTranslations": [
-            "He has a book."
-          ]
-        },
-        {
-          "nativeSentence": "Yo tengo un libro.",
-          "acceptedTranslations": [
-            "I have a book."
-          ]
-        },
-        {
-          "nativeSentence": "Nosotros hemos estudiado ingles.",
-          "acceptedTranslations": [
-            "We have studied English."
-          ]
-        },
-
       ]
     }
   },
   "lista-4": {
     "updatedAt": "2026-08-22T00:00:00.000Z",
     "def": {
-      "name": "Inglés Avanzado",
+      "name": "Inglés básico - Nivel 4 (Avanzado)",
       "nativeLanguage": "español",
       "targetLanguage": "inglés",
       "phrases": [
@@ -2354,7 +2094,7 @@ function jsonResponse(body, status = 200) {
   });
 }
 
-export default {
+globalThis.__handler = {
   async fetch(request) {
     if (request.method === "OPTIONS") {
       return new Response(null, { headers: CORS_HEADERS });

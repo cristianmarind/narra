@@ -167,11 +167,11 @@ async function readApplied(): Promise<AppliedVersions> {
  * whatever is already in local storage) always remain the fallback.
  */
 export function createRegistryDefaultListsService(): DefaultListsService {
-  async function loadManifest(): Promise<DefaultListsManifest | null> {
+  async function loadManifest(force = false): Promise<DefaultListsManifest | null> {
     try {
       const cached = await readManifestCache();
       const fresh = cached && Date.now() - new Date(cached.fetchedAt).getTime() < MANIFEST_CACHE_TTL_MS;
-      if (cached && fresh) {
+      if (cached && fresh && !force) {
         debugLog("using fresh cached manifest");
         return cached.manifest;
       }
@@ -193,9 +193,9 @@ export function createRegistryDefaultListsService(): DefaultListsService {
   }
 
   return {
-    async checkForUpdates() {
+    async checkForUpdates(options) {
       try {
-        const manifest = await loadManifest();
+        const manifest = await loadManifest(options?.force);
         if (!manifest) return [];
 
         const applied = await readApplied();
